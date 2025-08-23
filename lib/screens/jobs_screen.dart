@@ -259,7 +259,11 @@ class _JobsScreenState extends State<JobsScreen> {
     );
   }
 
-  void _showJobDetails(Job job) {
+  void _showJobDetails(Job job) async {
+    final detailedJob = await _jobService.getJobWithDetails(job.id);
+
+    if (!mounted) return;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -268,214 +272,187 @@ class _JobsScreenState extends State<JobsScreen> {
             initialChildSize: 0.7,
             minChildSize: 0.5,
             maxChildSize: 0.95,
-            builder:
-                (context, scrollController) => Container(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            job.title,
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ],
-                      ),
-                      const Divider(),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          controller: scrollController,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildDetailRow('Customer', job.customerName),
-                              _buildDetailRow('Contact', job.customerContact),
-                              _buildDetailRow(
-                                'Vehicle',
-                                '${job.vehicleModel} - ${job.vehiclePlate}',
-                              ),
-                              if (job.assignedTo != null)
-                                _buildDetailRow(
-                                  'Assigned To',
-                                  _getMechanicName(job.assignedTo),
-                                ),
-                              _buildDetailRow(
-                                'Status',
-                                job.status.replaceAll('_', ' ').toUpperCase(),
-                              ),
-                              _buildDetailRow(
-                                'Priority',
-                                job.priority.toUpperCase(),
-                              ),
-                              _buildDetailRow(
-                                'Scheduled Date',
-                                DateFormat(
-                                  'MMM dd, yyyy HH:mm',
-                                ).format(job.scheduledDate),
-                              ),
-                              _buildDetailRow(
-                                'Estimated Duration',
-                                '${job.estimatedDuration} minutes',
-                              ),
-                              if (job.completionDate != null)
-                                _buildDetailRow(
-                                  'Completion Date',
-                                  DateFormat(
-                                    'MMM dd, yyyy HH:mm',
-                                  ).format(job.completionDate!),
-                                ),
-                              _buildDetailRow('Description', job.description),
-
-                              // Display Notes
-                              if (job.notes.isNotEmpty) ...[
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'Notes:',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                ...job.notes.map((note) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(
-                                      left: 16,
-                                      bottom: 4,
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          note.title, // Display the note title
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Text(
-                                          note.text,
-                                        ), // Display the note text
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Created at: ${DateFormat('MMM dd, yyyy').format(note.createdAt)}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }),
-                              ],
-
-                              // Display Services
-                              if (job.services.isNotEmpty) ...[
-                                const SizedBox(height: 16),
-                                const Text(
-                                  'Services:',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                ...job.services.map(
-                                  (service) => Padding(
-                                    padding: const EdgeInsets.only(
-                                      left: 16,
-                                      bottom: 4,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.check_circle,
-                                          size: 16,
-                                          color: Colors.green,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                service.serviceName,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                              if (service
-                                                  .mechanicName
-                                                  .isNotEmpty)
-                                                Text(
-                                                  'Mechanic: ${service.mechanicName}',
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    color: Colors.grey[600],
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ],
+            builder: (context, scrollController) {
+              final displayJob = detailedJob ?? job; // fallback to basic job
+              return Container(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ✅ Use displayJob instead of job
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          displayJob.title,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => CreateJobScreen(
-                                          jobData: job,
-                                        ), // pass job map
-                                  ),
-                                );
-                                // TODO: Navigate to edit job screen
-                              },
-                              child: const Text('Edit Job'),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                    const Divider(),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        controller: scrollController,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildDetailRow(
+                              'Customer',
+                              displayJob.customerName,
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.pop(context);
-                                _showStatusUpdateDialog(job);
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue,
-                                foregroundColor: Colors.white,
+                            _buildDetailRow(
+                              'Contact',
+                              displayJob.customerContact,
+                            ),
+                            _buildDetailRow(
+                              'Vehicle',
+                              '${displayJob.vehicleModel} - ${displayJob.vehiclePlate}',
+                            ),
+                            if (displayJob.assignedTo != null)
+                              _buildDetailRow(
+                                'Assigned To',
+                                _getMechanicName(displayJob.assignedTo),
                               ),
-                              child: const Text('Update Status'),
+                            _buildDetailRow(
+                              'Status',
+                              displayJob.status
+                                  .replaceAll('_', ' ')
+                                  .toUpperCase(),
                             ),
-                          ),
-                        ],
+                            _buildDetailRow(
+                              'Priority',
+                              displayJob.priority.toUpperCase(),
+                            ),
+                            _buildDetailRow(
+                              'Scheduled Date',
+                              DateFormat(
+                                'MMM dd, yyyy HH:mm',
+                              ).format(displayJob.scheduledDate),
+                            ),
+                            _buildDetailRow(
+                              'Estimated Duration',
+                              '${displayJob.estimatedDuration} minutes',
+                            ),
+                            if (displayJob.completionDate != null)
+                              _buildDetailRow(
+                                'Completion Date',
+                                DateFormat(
+                                  'MMM dd, yyyy HH:mm',
+                                ).format(displayJob.completionDate!),
+                              ),
+                            _buildDetailRow(
+                              'Description',
+                              displayJob.description,
+                            ),
+
+                            // ✅ Now notes & services will load
+                            if (displayJob.notes.isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Notes:',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ...displayJob.notes.map(
+                                (note) => Padding(
+                                  padding: const EdgeInsets.only(
+                                    left: 16,
+                                    bottom: 4,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        note.title,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(note.text),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Created at: ${DateFormat('MMM dd, yyyy').format(note.createdAt)}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+
+                            if (displayJob.services.isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              const Text(
+                                'Services:',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              ...displayJob.services.map(
+                                (service) => Padding(
+                                  padding: const EdgeInsets.only(
+                                    left: 16,
+                                    bottom: 4,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.check_circle,
+                                        size: 16,
+                                        color: Colors.green,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              service.serviceName,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            if (service.mechanicName.isNotEmpty)
+                                              Text(
+                                                'Mechanic: ${service.mechanicName}',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
+              );
+            },
           ),
     );
   }

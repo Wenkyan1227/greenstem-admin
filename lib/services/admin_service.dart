@@ -54,9 +54,7 @@ class AdminService {
     required String password,
   }) async {
     // Check if the email is "admin@gmail.com"
-    if (email != 'admin@gmail.com') {
-      return null; // Reject the login attempt if email is not "admin@gmail.com"
-    }
+
 
     // Sign in with Firebase Auth
     try {

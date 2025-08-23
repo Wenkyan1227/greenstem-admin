@@ -53,7 +53,7 @@ class MyApp extends StatelessWidget {
         floatingActionButtonTheme: FloatingActionButtonThemeData(
           backgroundColor: Color(0xFF29A87A),
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           elevation: 2,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

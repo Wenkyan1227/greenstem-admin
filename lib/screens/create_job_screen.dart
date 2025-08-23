@@ -47,7 +47,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   // Service tasks
   final List<ServiceTask> _services = [];
 
-  // Store notes for each service task
+  // Store notes for each service task using the original service task ID
   final Map<String, String> _serviceTaskNotes = {};
 
   // Data lists
@@ -71,7 +71,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     }
   }
 
-  void _loadJobDataForEdit() {
+  void _loadJobDataForEdit() async {
     final job = widget.jobData!;
     _titleController.text = job.title;
     _descriptionController.text = job.description;
@@ -84,31 +84,53 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     _scheduledTime = TimeOfDay.fromDateTime(job.scheduledDate);
     _estimatedDuration = int.tryParse(job.estimatedDuration) ?? 60;
 
-    // Load existing services - don't clear, just add them
-    if (job.services.isNotEmpty) {
-      _services.clear(); // Clear first to avoid duplicates
-      _services.addAll(job.services);
+    // Load the job with full details including notes and service tasks
+    Job? jobWithDetails = await _jobService.getJobWithDetails(job.id);
+    
+    if (jobWithDetails != null) {
+      // Load general note
+      final generalNote = jobWithDetails.notes.firstWhere(
+        (note) => note.serviceTaskId == null,
+        orElse: () => Note(
+          id: '',
+          title: '',
+          text: '',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          photoUrls: [],
+        ),
+      );
+      if (generalNote.id.isNotEmpty) {
+        _notesController.text = generalNote.text;
+      }
 
-      // Load existing notes for each service task
-      _serviceTaskNotes.clear();
-      for (final service in job.services) {
-        final existingNote = job.notes.firstWhere(
-          (note) => note.serviceTaskId == service.id,
-          orElse:
-              () => Note(
-                id: '',
-                title: '',
-                text: '',
-                createdAt: DateTime.now(),
-                updatedAt: DateTime.now(),
-                photoUrls: [],
-              ),
-        );
-        if (existingNote.id.isNotEmpty) {
-          _serviceTaskNotes[service.id] = existingNote.text;
+      // Load existing services
+      if (jobWithDetails.services.isNotEmpty) {
+        _services.clear();
+        _services.addAll(jobWithDetails.services);
+
+        // Load existing notes for each service task
+        _serviceTaskNotes.clear();
+        for (final service in jobWithDetails.services) {
+          final existingNote = jobWithDetails.notes.firstWhere(
+            (note) => note.serviceTaskId == service.id,
+            orElse: () => Note(
+              id: '',
+              title: '',
+              text: '',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+              photoUrls: [],
+            ),
+          );
+          if (existingNote.id.isNotEmpty) {
+            _serviceTaskNotes[service.id] = existingNote.text;
+          }
         }
       }
     }
+    
+    setState(() {});
   }
 
   void _loadVehicleDataForEdit() {
@@ -150,8 +172,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           } else {
             _selectedMechanic = _mechanics.first.id;
           }
-          // Load job data after mechanics are loaded
-          _loadJobDataForEdit();
         } else if (_mechanics.isNotEmpty && _selectedMechanic.isEmpty) {
           _selectedMechanic = _mechanics.first.id;
         }
@@ -340,7 +360,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                             Text('Name: $serviceName'),
                             if (description.isNotEmpty)
                               Text('Description: $description'),
-                            Text('Cost: \$${cost.toStringAsFixed(2)}'),
+                            Text('Cost: \${cost.toStringAsFixed(2)}'),
                             Text('Duration: $estimatedDuration'),
                           ],
                         ),
@@ -426,11 +446,13 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
+                    
                     if (selectedServiceTaskId.isNotEmpty &&
                         serviceName.isNotEmpty) {
                       // Create the service task (don't save to database yet)
+                      // Use a temporary unique ID that will be replaced in JobService
                       final serviceTask = ServiceTask(
-                        id: 'ST${DateTime.now().millisecondsSinceEpoch}',
+                        id: 'TEMP_${DateTime.now().millisecondsSinceEpoch}',
                         mechanicId: mechanic.id,
                         mechanicName: mechanic.name,
                         serviceName: serviceName,
@@ -439,7 +461,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         estimatedDuration: estimatedDuration,
                       );
 
-                      // Add to services list
+                      // Add to services list and store the note using the temporary ID
                       this.setState(() {
                         _services.add(serviceTask);
                         _serviceTaskNotes[serviceTask.id] = notes;
@@ -529,7 +551,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                           Text('Name: $serviceName'),
                           if (description.isNotEmpty)
                             Text('Description: $description'),
-                          Text('Cost: \$${cost.toStringAsFixed(2)}'),
+                          Text('Cost: \${cost.toStringAsFixed(2)}'),
                           Text('Duration: $estimatedDuration'),
                         ],
                       ),
@@ -593,10 +615,10 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           (model) => model.id == _selectedVehicleModel,
         );
 
-        // Save new service tasks to database first
+        // Save new service tasks to database first (if they're new "Others" entries)
         for (final service in _services) {
-          // Check if this is a new service task (starts with 'ST' and has timestamp)
-          if (service.id.startsWith('ST') && service.id.length > 20) {
+          // Check if this is a new service task that should be added to catalog
+          if (service.id.startsWith('TEMP_')) {
             // This is a new service task, save it to the catalog
             final newServiceTask = ServiceTaskCatalog(
               id: '',
@@ -622,44 +644,10 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           }
         }
 
-        // Creating the notes list
-        List<Note> notes = [];
-
-        // Add general job notes if provided
-        if (_notesController.text.isNotEmpty) {
-          notes.add(
-            Note(
-              id: 'N0001_${DateTime.now().millisecondsSinceEpoch}',
-              title: 'General Job Notes',
-              text: _notesController.text,
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-              photoUrls: [],
-            ),
-          );
-        }
-
-        // Add notes for each service task
-        for (final service in _services) {
-          if (_serviceTaskNotes[service.id]?.isNotEmpty == true) {
-            notes.add(
-              Note(
-                id: 'N${DateTime.now().millisecondsSinceEpoch}',
-                title: 'Service Task Notes',
-                text: _serviceTaskNotes[service.id]!,
-                createdAt: DateTime.now(),
-                updatedAt: DateTime.now(),
-                photoUrls: [],
-                serviceTaskId: service.id,
-              ),
-            );
-          }
-        }
-
         if (widget.jobData == null) {
           // Create new job
           final job = Job(
-            id: '', // Will be set by Firestore
+            id: '', // Firestore sets this
             title: _titleController.text,
             description: _descriptionController.text,
             customerName: _customerNameController.text,
@@ -668,16 +656,24 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             vehiclePlate: _vehiclePlateController.text,
             priority: _selectedPriority,
             status: _selectedStatus,
-            services: List.from(_services),
             scheduledDate: _scheduledDate,
             createdDate: DateTime.now(),
             imageUrl: selectedModel.imageUrl,
             estimatedDuration: _estimatedDuration.toString(),
-            notes: notes,
             assignedTo: selectedMechanic.id,
+
+            // Exclude notes & services from main doc - will be stored in subcollections
+            notes: [],
+            services: [],
           );
 
-          await _jobService.createJob(job);
+          // Use the improved createJob method
+          await _jobService.createJob(
+            job, 
+            generalNoteText: _notesController.text,
+            services: _services,
+            serviceTaskNotes: _serviceTaskNotes,
+          );
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -689,7 +685,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             Navigator.pop(context);
           }
         } else {
-          // Update existing job
+          // Update existing job using the new subcollection method
           final updatedJob = widget.jobData!.copyWith(
             title: _titleController.text,
             description: _descriptionController.text,
@@ -699,14 +695,18 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             vehiclePlate: _vehiclePlateController.text,
             priority: _selectedPriority,
             status: _selectedStatus,
-            services: List.from(_services),
             scheduledDate: _scheduledDate,
             estimatedDuration: _estimatedDuration.toString(),
-            notes: notes,
             assignedTo: selectedMechanic.id,
           );
 
-          await _jobService.updateJob(updatedJob);
+          // Use updateJobWithSubcollections to handle notes and service tasks
+          await _jobService.updateJobWithSubcollections(
+            updatedJob,
+            generalNoteText: _notesController.text,
+            services: _services,
+            serviceTaskNotes: _serviceTaskNotes,
+          );
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -1045,7 +1045,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         children: [
                           if (service.description.isNotEmpty)
                             Text('Description: ${service.description}'),
-                          Text('Cost: \$${service.cost.toStringAsFixed(2)}'),
+                          Text('Cost: \${service.cost.toStringAsFixed(2)}'),
                           Text('Duration: ${service.estimatedDuration}'),
                           if (serviceNotes.isNotEmpty) ...[
                             const SizedBox(height: 4),

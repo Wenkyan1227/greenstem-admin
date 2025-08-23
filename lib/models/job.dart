@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -17,8 +16,8 @@ class Job {
   final DateTime createdDate;
   final String imageUrl;
   final String estimatedDuration;
-  final List<Note> notes; // Modified to handle a list of notes
-  final Uint8List? customerSignature;
+  final List<Note> notes;
+  final String? customerSignature;
   final DateTime? completionDate;
   final String? assignedTo;
 
@@ -37,7 +36,7 @@ class Job {
     required this.createdDate,
     required this.imageUrl,
     required this.estimatedDuration,
-    required this.notes, // Accepts a list of notes
+    required this.notes,
     this.customerSignature,
     this.completionDate,
     this.assignedTo,
@@ -46,33 +45,6 @@ class Job {
   factory Job.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
-    // Handle notes and service tasks as nested collections
-    List<Note> notes = [];
-    if (data['notes'] != null && data['notes'] is List) {
-      notes =
-          (data['notes'] as List)
-              .map((noteData) => Note.fromFirestoreData(noteData))
-              .toList();
-    }
-
-    List<ServiceTask> serviceTasks = [];
-    if (data['serviceTasks'] != null && data['serviceTasks'] is List) {
-      serviceTasks =
-          (data['serviceTasks'] as List)
-              .map((s) => ServiceTask.fromFirestoreData(s))
-              .toList();
-    }
-
-    Uint8List? signature;
-    if (data['customerSignature'] != null &&
-        data['customerSignature'] is String &&
-        (data['customerSignature'] as String).isNotEmpty) {
-      try {
-        signature = base64Decode(data['customerSignature']);
-      } catch (_) {
-        signature = null;
-      }
-    }
 
     return Job(
       id: doc.id,
@@ -84,7 +56,8 @@ class Job {
       vehiclePlate: data['vehiclePlate'] ?? '',
       priority: data['priority'] ?? 'medium',
       status: data['status'] ?? 'pending',
-      services: serviceTasks,
+      services: [], // Will be loaded separately from subcollection
+      notes: [], // Will be loaded separately from subcollection
       scheduledDate:
           (data['scheduledDate'] is Timestamp)
               ? (data['scheduledDate'] as Timestamp).toDate()
@@ -95,8 +68,7 @@ class Job {
               : DateTime.parse(data['createdDate']),
       imageUrl: data['imageUrl'] ?? '',
       estimatedDuration: data['estimatedDuration'] ?? '',
-      notes: notes,
-      customerSignature: signature,
+      customerSignature: data['customerSignature'] as String?,
       completionDate:
           data['completionDate'] != null
               ? (data['completionDate'] is Timestamp
@@ -107,6 +79,7 @@ class Job {
     );
   }
 
+  // Modified toFirestore to exclude subcollections from main document
   Map<String, dynamic> toFirestore() {
     return {
       'title': title,
@@ -117,17 +90,15 @@ class Job {
       'vehiclePlate': vehiclePlate,
       'priority': priority,
       'status': status,
-      'serviceTasks': services.map((s) => s.toFirestore()).toList(),
       'scheduledDate': Timestamp.fromDate(scheduledDate),
       'createdDate': Timestamp.fromDate(createdDate),
       'imageUrl': imageUrl,
       'estimatedDuration': estimatedDuration,
-      'notes': notes.map((note) => note.toFirestore()).toList(), // Save notes
-      'customerSignature':
-          customerSignature != null ? base64Encode(customerSignature!) : null,
+      'customerSignature': customerSignature,
       'completionDate':
           completionDate != null ? Timestamp.fromDate(completionDate!) : null,
       'assignedTo': assignedTo,
+      // Note: Don't include 'notes' and 'serviceTasks' here as they're in subcollections
     };
   }
 
@@ -147,7 +118,7 @@ class Job {
     String? imageUrl,
     String? estimatedDuration,
     List<Note>? notes,
-    Uint8List? customerSignature,
+    String? customerSignature,
     DateTime? completionDate,
     String? assignedTo,
   }) {
@@ -182,11 +153,11 @@ class ServiceTask {
   final String? mechanicPart;
   final String description;
   final double cost;
-  final String estimatedDuration; // e.g., "1h"
+  final String estimatedDuration;
   final Duration? actualDuration;
   final DateTime? startTime;
   final DateTime? endTime;
-  final String? status; // e.g., "In Progress", "Completed"
+  final String? status;
 
   ServiceTask({
     required this.id,
@@ -219,10 +190,16 @@ class ServiceTask {
               : null,
       startTime:
           data['startTime'] != null
-              ? DateTime.tryParse(data['startTime'])
+              ? (data['startTime'] is Timestamp 
+                  ? (data['startTime'] as Timestamp).toDate()
+                  : DateTime.tryParse(data['startTime']))
               : null,
       endTime:
-          data['endTime'] != null ? DateTime.tryParse(data['endTime']) : null,
+          data['endTime'] != null 
+              ? (data['endTime'] is Timestamp
+                  ? (data['endTime'] as Timestamp).toDate()
+                  : DateTime.tryParse(data['endTime']))
+              : null,
       status: data['status'] ?? 'Pending',
     );
   }
@@ -238,8 +215,8 @@ class ServiceTask {
       'cost': cost,
       'estimatedDuration': estimatedDuration,
       'actualDuration': actualDuration?.inSeconds,
-      'startTime': startTime?.toIso8601String(),
-      'endTime': endTime?.toIso8601String(),
+      'startTime': startTime != null ? Timestamp.fromDate(startTime!) : null,
+      'endTime': endTime != null ? Timestamp.fromDate(endTime!) : null,
       'status': status,
     };
   }
@@ -306,8 +283,12 @@ class Note {
       id: data['id'] ?? '',
       title: data['title'] ?? '',
       text: data['text'] ?? '',
-      createdAt: DateTime.parse(data['createdAt']),
-      updatedAt: DateTime.parse(data['updatedAt']),
+      createdAt: data['createdAt'] is Timestamp
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.parse(data['createdAt']),
+      updatedAt: data['updatedAt'] is Timestamp
+          ? (data['updatedAt'] as Timestamp).toDate()
+          : DateTime.parse(data['updatedAt']),
       photoUrls: List<String>.from(data['photoUrls'] ?? []),
       serviceTaskId: data['serviceTaskId'],
     );
@@ -318,10 +299,30 @@ class Note {
       'id': id,
       'title': title,
       'text': text,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'createdAt': Timestamp.fromDate(createdAt),
+      'updatedAt': Timestamp.fromDate(updatedAt),
       'photoUrls': photoUrls,
       'serviceTaskId': serviceTaskId,
     };
+  }
+
+  Note copyWith({
+    String? id,
+    String? title,
+    String? text,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    List<String>? photoUrls,
+    String? serviceTaskId,
+  }) {
+    return Note(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      text: text ?? this.text,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      photoUrls: photoUrls ?? this.photoUrls,
+      serviceTaskId: serviceTaskId ?? this.serviceTaskId,
+    );
   }
 }
