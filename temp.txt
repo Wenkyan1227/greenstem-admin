@@ -1,0 +1,51 @@
+{
+  "job": {
+    "assignedTo": "fCevoCySnDOfMFZShskxMobrRVl2",
+    "completionDate": "2025-08-20T11:21:26.195180",
+    "createdDate": "2025-08-09T18:42:17.235522",
+    "customerContact": "123-456-7890",
+    "customerName": "Sarah",
+    "customerSignature": null,
+    "description": "Change engine oil and filter",
+    "estimatedDuration": "1h",
+    "id": "J0001",
+    "imageUrl": "https://www.toyota.com.my/content/dam/malaysia/models/camry-ice/gallery/desktop/toyota-my-gallery-exterior-d-04.png",
+    "priority": "Low",
+    "scheduledDate": "2025-08-12T18:42:17.227034",
+    "status": "Completed",
+    "title": "Oil Change",
+    "vehicleModel": "Honda Civic",
+    "vehiclePlate": "ABC123",
+    "notes": [
+      {
+        "createdAt": "2025-08-11T16:42:17.237251",
+        "id": "N0001_J0001_01",
+        "photoUrls": [],
+        "serviceTaskId": null,
+        "text": "Customer requested synthetic oil. Vehicle is in good condition.",
+        "title": "General Notes",
+        "type": "general",
+        "updatedAt": "2025-08-11T16:42:17.237333"
+      }
+    ],
+    "serviceTasks": [
+      {
+        "actualDuration": null,
+        "cost": 50,
+        "description": "Change engine oil and oil filter",
+        "endTime": null,
+        "estimatedDuration": "1h",
+        "id": "ST001_01",
+        "mechanicId": "m1",
+        "mechanicName": "Mike",
+        "mechanicPart": "Engine",
+        "serviceName": "Oil Change",
+        "startTime": "2025-08-11T17:42:17.235988",
+        "status": "In Progress"
+      }
+    ]
+  }
+}
+
+
+create the code for me to add the default data into db, for the service task, just need to have - cost - description - estimatedDuration - serviceName then others details will be added in when the admin create the job
