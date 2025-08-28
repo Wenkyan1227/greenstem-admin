@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:greenstem_admin/models/note.dart';
+import 'package:greenstem_admin/models/service_task.dart';
 import '../models/job.dart';
 
 class JobService {

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:greenstem_admin/screens/create_job_screen.dart';
 import 'package:intl/intl.dart';
 import '../models/job.dart';
-import '../models/mechanic.dart';
 import '../services/job_service.dart';
 import '../services/mechanic_service.dart';
 import '../widgets/job_card.dart';
