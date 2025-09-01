@@ -6,11 +6,14 @@ import '../models/job.dart';
 import '../models/mechanic.dart';
 import '../models/vehicle.dart';
 import '../models/service_task_catalog.dart';
+import '../models/part.dart';
 import '../services/job_service.dart';
 import '../services/mechanic_service.dart';
 import '../services/vehicle_service.dart';
 import '../services/service_task_catalog_service.dart';
+import '../services/part_catalog_service.dart';
 import '../widgets/text_formatter.dart';
+import '../widgets/job_parts_selector.dart';
 
 class CreateJobScreen extends StatefulWidget {
   final Job? jobData; // Pass job data here for edit
@@ -27,6 +30,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   final VehicleService _vehicleService = VehicleService();
   final ServiceTaskCatalogService _serviceTaskService =
       ServiceTaskCatalogService();
+  final PartCatalogService _partService = PartCatalogService();
 
   // Form controllers
   final _titleController = TextEditingController();
@@ -45,6 +49,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   DateTime _scheduledDate = DateTime.now();
   TimeOfDay _scheduledTime = TimeOfDay.now();
   int _estimatedDuration = 60; // minutes
+  List<Part> _selectedParts = [];
 
   // Service tasks
   final List<ServiceTask> _services = [];
@@ -130,6 +135,12 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           }
         }
       }
+
+      // Load existing parts
+      final parts = await Job.loadParts(job.id);
+      setState(() {
+        _selectedParts = parts;
+      });
     }
     
     setState(() {});
@@ -675,6 +686,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             generalNoteText: _notesController.text,
             services: _services,
             serviceTaskNotes: _serviceTaskNotes,
+            parts: _selectedParts,
           );
 
           if (mounted) {
@@ -702,12 +714,13 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             assignedTo: selectedMechanic.id,
           );
 
-          // Use updateJobWithSubcollections to handle notes and service tasks
+          // Use updateJobWithSubcollections to handle notes, service tasks and parts
           await _jobService.updateJobWithSubcollections(
             updatedJob,
             generalNoteText: _notesController.text,
             services: _services,
             serviceTaskNotes: _serviceTaskNotes,
+            parts: _selectedParts,
           );
 
           if (mounted) {
@@ -1099,7 +1112,47 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                 })),
               ],
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 24),
+
+              // Parts Section
+              _buildSectionTitle('Parts'),
+              JobPartsSelector(
+                jobId: widget.jobData?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+                selectedParts: _selectedParts,
+                onPartAdded: (part) {
+                  setState(() {
+                    _selectedParts.add(part);
+                  });
+                },
+                onPartRemoved: (partId) {
+                  setState(() {
+                    _selectedParts.removeWhere((p) => p.id == partId);
+                  });
+                },
+                onQuantityChanged: (partId, newQuantity) {
+                  setState(() {
+                    final index = _selectedParts.indexWhere((p) => p.id == partId);
+                    if (index != -1) {
+                      final part = _selectedParts[index];
+                      _selectedParts[index] = Part(
+                        id: part.id,
+                        catalogId: part.catalogId,
+                        name: part.name,
+                        price: part.price,
+                        quantity: newQuantity,
+                        description: part.description,
+                        category: part.category,
+                        addedAt: part.addedAt,
+                      );
+                    }
+                  });
+                },
+              ),
+
+              const SizedBox(height: 24),
+
+              // Notes
+              _buildSectionTitle('Notes'),
               TextFormField(
                 controller: _notesController,
                 decoration: const InputDecoration(

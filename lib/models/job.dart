@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:greenstem_admin/models/note.dart';
 import 'package:greenstem_admin/models/service_task.dart';
+import 'package:greenstem_admin/models/part.dart';
 
 class Job {
   final String id;
@@ -13,6 +14,7 @@ class Job {
   final String priority;
   final String status;
   final List<ServiceTask> services;
+  final List<Part> parts;
   final DateTime scheduledDate;
   final DateTime createdDate;
   final String imageUrl;
@@ -33,6 +35,7 @@ class Job {
     required this.priority,
     required this.status,
     required this.services,
+    this.parts = const [],
     required this.scheduledDate,
     required this.createdDate,
     required this.imageUrl,
@@ -58,6 +61,7 @@ class Job {
       priority: data['priority'] ?? 'medium',
       status: data['status'] ?? 'pending',
       services: [], // Will be loaded separately from subcollection
+      parts: [], // Will be loaded separately from subcollection
       notes: [], // Will be loaded separately from subcollection
       scheduledDate:
           (data['scheduledDate'] is Timestamp)
@@ -111,6 +115,7 @@ class Job {
     String? customerContact,
     String? vehicleModel,
     String? vehiclePlate,
+    
     String? priority,
     String? status,
     List<ServiceTask>? services,
@@ -144,5 +149,30 @@ class Job {
       assignedTo: assignedTo ?? this.assignedTo,
     );
   }
-}
 
+  // Load service tasks from subcollection
+  static Future<List<ServiceTask>> loadServiceTasks(String jobId) async {
+    QuerySnapshot snapshot = await FirebaseFirestore.instance
+        .collection('jobs')
+        .doc(jobId)
+        .collection('service_tasks')
+        .get();
+    
+    return snapshot.docs
+        .map((doc) => ServiceTask.fromFirestoreData(doc.data() as Map<String, dynamic>))
+        .toList();
+  }
+
+  // Load parts from subcollection
+  static Future<List<Part>> loadParts(String jobId) async {
+    QuerySnapshot snapshot = await FirebaseFirestore.instance
+        .collection('jobs')
+        .doc(jobId)
+        .collection('parts')
+        .get();
+    
+    return snapshot.docs
+        .map((doc) => Part.fromMap(doc.data() as Map<String, dynamic>))
+        .toList();
+  }
+}

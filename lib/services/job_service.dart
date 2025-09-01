@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:greenstem_admin/models/note.dart';
 import 'package:greenstem_admin/models/service_task.dart';
 import '../models/job.dart';
+import '../models/part.dart';
 
 class JobService {
   final CollectionReference _jobsCollection = FirebaseFirestore.instance
@@ -64,6 +65,7 @@ class JobService {
     String generalNoteText = '',
     List<ServiceTask> services = const [],
     Map<String, String> serviceTaskNotes = const {},
+    List<Part> parts = const [],
   }) async {
     // Generate custom job ID
     String jobId = await _generateJobId();
@@ -124,6 +126,13 @@ class JobService {
       
       batch.set(docRef.collection("notes").doc(serviceNoteId), serviceNote.toFirestore());
     }
+
+    // Add parts to subcollection with proper ID format P000X_0X
+    for (int i = 0; i < parts.length; i++) {
+      String partId = 'P${jobId}_${(i + 1).toString().padLeft(2, '0')}';
+      final partWithId = parts[i].copyWith(id: partId);
+      batch.set(docRef.collection("parts").doc(partId), partWithId.toMap());
+    }
     
     await batch.commit();
   }
@@ -145,6 +154,7 @@ class JobService {
     String? generalNoteText,
     List<ServiceTask>? services,
     Map<String, String>? serviceTaskNotes,
+    List<Part>? parts,
   }) async {
     final batch = FirebaseFirestore.instance.batch();
     final jobRef = _jobsCollection.doc(job.id);
@@ -209,6 +219,22 @@ class JobService {
         batch.set(jobRef.collection('notes').doc(serviceNoteId), serviceNote.toFirestore());
       }
     }
+
+    // Update parts if provided
+    if (parts != null) {
+      // First, delete existing parts
+      final existingParts = await jobRef.collection('parts').get();
+      for (final doc in existingParts.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Add new parts with proper ID format P000X_0X
+      for (int i = 0; i < parts.length; i++) {
+        String partId = 'P${job.id}_${(i + 1).toString().padLeft(2, '0')}';
+        final partWithId = parts[i].copyWith(id: partId);
+        batch.set(jobRef.collection('parts').doc(partId), partWithId.toMap());
+      }
+    }
     
     await batch.commit();
   }
@@ -227,6 +253,12 @@ class JobService {
     // Delete service_tasks subcollection
     final tasks = await jobRef.collection('service_tasks').get();
     for (final doc in tasks.docs) {
+      batch.delete(doc.reference);
+    }
+
+    // Delete parts subcollection
+    final parts = await jobRef.collection('parts').get();
+    for (final doc in parts.docs) {
       batch.delete(doc.reference);
     }
     
