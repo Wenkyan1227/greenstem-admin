@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class ServiceTaskCatalog {
   final String id;                // Firestore doc id
   final String serviceName;       // e.g. "Oil Change"
@@ -13,22 +15,25 @@ class ServiceTaskCatalog {
     required this.estimatedDuration,
   });
 
-  factory ServiceTaskCatalog.fromMap(String id, Map<String, dynamic> map) {
+  factory ServiceTaskCatalog.fromFirestoreData(String id, Map<String, dynamic> map) {
     return ServiceTaskCatalog(
       id: id,
       serviceName: map['serviceName'] ?? '',
       description: map['description'] ?? '',
       cost: (map['cost'] ?? 0).toDouble(),
-      estimatedDuration: map['estimatedDuration'] ?? '',
+      estimatedDuration:
+          map['estimatedDuration'] != null
+              ? Duration(seconds: map['estimatedDuration'] as int)
+              : Duration.zero,
     );
   }
 
-  Map<String, dynamic> toMap() {
+  Map<String, dynamic> toFirestore() {
     return {
       'serviceName': serviceName,
       'description': description,
       'cost': cost,
-      'estimatedDuration': estimatedDuration,
+      'estimatedDuration': estimatedDuration.inSeconds,
     };
   }
 }

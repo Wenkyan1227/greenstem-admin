@@ -39,6 +39,7 @@ class JobCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color statusColor;
+    // ignore: unused_local_variable
     IconData statusIcon;
 
     switch (job.status) {

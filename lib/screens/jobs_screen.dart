@@ -486,6 +486,40 @@ class _JobsScreenState extends State<JobsScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) =>
+                                          CreateJobScreen(jobData: displayJob),
+                                ),
+                              );
+                            },
+                            child: const Text('Edit Job'),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _showStatusUpdateDialog(job);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('Update Status'),
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               );
@@ -510,6 +544,85 @@ class _JobsScreenState extends State<JobsScreen> {
           Expanded(child: Text(value)),
         ],
       ),
+    );
+  }
+
+  void _showStatusUpdateDialog(Job job) {
+    String newStatus = job.status;
+    showDialog(
+      context: context,
+      builder:
+          (context) => StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                title: const Text('Update Job Status'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ListTile(
+                      title: const Text('Pending'),
+                      leading: Radio<String>(
+                        value: 'pending',
+                        groupValue: newStatus,
+                        onChanged:
+                            (value) => setDialogState(() => newStatus = value!),
+                      ),
+                      onTap: () => setDialogState(() => newStatus = 'pending'),
+                    ),
+                    ListTile(
+                      title: const Text('In Progress'),
+                      leading: Radio<String>(
+                        value: 'in_progress',
+                        groupValue: newStatus,
+                        onChanged:
+                            (value) =>
+                                setDialogState(() => newStatus = 'in_progress'),
+                      ),
+                      onTap:
+                          () => setDialogState(() => newStatus = 'in_progress'),
+                    ),
+                    ListTile(
+                      title: const Text('Completed'),
+                      leading: Radio<String>(
+                        value: 'completed',
+                        groupValue: newStatus,
+                        onChanged:
+                            (value) =>
+                                setDialogState(() => newStatus = 'completed'),
+                      ),
+                      onTap:
+                          () => setDialogState(() => newStatus = 'completed'),
+                    ),
+                    ListTile(
+                      title: const Text('Cancelled'),
+                      leading: Radio<String>(
+                        value: 'cancelled',
+                        groupValue: newStatus,
+                        onChanged:
+                            (value) =>
+                                setDialogState(() => newStatus = 'cancelled'),
+                      ),
+                      onTap:
+                          () => setDialogState(() => newStatus = 'cancelled'),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _updateJobStatus(job.id, newStatus);
+                    },
+                    child: const Text('Update'),
+                  ),
+                ],
+              );
+            },
+          ),
     );
   }
 

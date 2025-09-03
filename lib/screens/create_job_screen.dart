@@ -14,6 +14,8 @@ import '../services/service_task_catalog_service.dart';
 import '../services/part_catalog_service.dart';
 import '../widgets/text_formatter.dart';
 import '../widgets/job_parts_selector.dart';
+import '../services/customer_service.dart';
+import '../models/customer.dart';
 
 class CreateJobScreen extends StatefulWidget {
   final Job? jobData; // Pass job data here for edit
@@ -31,6 +33,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   final ServiceTaskCatalogService _serviceTaskService =
       ServiceTaskCatalogService();
   final PartCatalogService _partService = PartCatalogService();
+  final CustomerService _customerService = CustomerService();
 
   // Form controllers
   final _titleController = TextEditingController();
@@ -48,7 +51,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   String _selectedVehicleModel = '';
   DateTime _scheduledDate = DateTime.now();
   TimeOfDay _scheduledTime = TimeOfDay.now();
-  Duration _estimatedDuration = Duration.zero; 
+  Duration _estimatedDuration = Duration.zero;
   String _formatDuration(Duration d) {
     final h = d.inHours;
     final m = d.inMinutes % 60;
@@ -86,7 +89,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   List<Mechanic> _mechanics = [];
   List<VehicleBrand> _vehicleBrands = [];
   List<VehicleModel> _availableModels = [];
-
+  List<Customer> _customers = [];
+  String _selectedVehiclePlate = '';
+  // List<String> _vehiclePlates = [];
   // Service Task Catalog
   List<ServiceTaskCatalog> _serviceTaskCatalog = [];
 
@@ -118,19 +123,20 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
 
     // Load the job with full details including notes and service tasks
     Job? jobWithDetails = await _jobService.getJobWithDetails(job.id);
-    
+
     if (jobWithDetails != null) {
       // Load general note
       final generalNote = jobWithDetails.notes.firstWhere(
         (note) => note.serviceTaskId == null,
-        orElse: () => Note(
-          id: '',
-          title: '',
-          text: '',
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-          photoUrls: [],
-        ),
+        orElse:
+            () => Note(
+              id: '',
+              title: '',
+              text: '',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+              photoUrls: [],
+            ),
       );
       if (generalNote.id.isNotEmpty) {
         _notesController.text = generalNote.text;
@@ -146,28 +152,29 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         for (final service in jobWithDetails.services) {
           final existingNote = jobWithDetails.notes.firstWhere(
             (note) => note.serviceTaskId == service.id,
-            orElse: () => Note(
-              id: '',
-              title: '',
-              text: '',
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-              photoUrls: [],
-            ),
+            orElse:
+                () => Note(
+                  id: '',
+                  title: '',
+                  text: '',
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now(),
+                  photoUrls: [],
+                ),
           );
           if (existingNote.id.isNotEmpty) {
             _serviceTaskNotes[service.id] = existingNote.text;
           }
         }
       }
-
+     
       // Load existing parts
       final parts = await Job.loadParts(job.id);
       setState(() {
         _selectedParts = parts;
       });
     }
-    
+
     setState(() {});
   }
 
@@ -238,6 +245,17 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         _serviceTaskCatalog = tasks;
       });
     });
+
+    // Load customers
+    _customerService.getCustomers().listen((customers) {
+      setState(() {
+        _customers = customers;
+        if (_customers.isNotEmpty && _selectedVehiclePlate.isEmpty) {
+          _selectedVehiclePlate = _customers.first.vehiclePlate;
+          _updateVehicleAndCustomerInfo();
+        }
+      });
+    });
   }
 
   void _updateAvailableModels() {
@@ -252,6 +270,34 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         }
       });
     }
+  }
+
+  void _updateVehicleAndCustomerInfo() {
+    setState(() {
+      if (_selectedVehiclePlate == 'others') {
+        // If 'Others' is selected, clear all fields
+        _vehiclePlateController.clear();
+        _selectedVehicleBrand = '';
+        _selectedVehicleModel = '';
+        _customerNameController.clear();
+        _customerContactController.clear();
+      } else {
+        // If a specific vehicle plate is selected, find the corresponding data
+        final customerData = _customers.firstWhere(
+          (customer) => customer.vehiclePlate == _selectedVehiclePlate,
+        );
+
+        // Pre-fill the vehicle information
+        _vehiclePlateController.text = customerData.vehiclePlate;
+        _selectedVehicleBrand = customerData.vehicleBrand;
+        _updateAvailableModels();
+        _selectedVehicleModel = customerData.vehicleModel;
+
+        // Pre-fill the customer information
+        _customerNameController.text = customerData.customerName;
+        _customerContactController.text = customerData.customerContact;
+      }
+    });
   }
 
   Future<void> _selectDate() async {
@@ -399,7 +445,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                             if (description.isNotEmpty)
                               Text('Description: $description'),
                             Text('Cost: ${cost.toStringAsFixed(2)}'),
-                            Text('Duration: ${_formatDuration(estimatedDuration)}'),
+                            Text(
+                              'Duration: ${_formatDuration(estimatedDuration)}',
+                            ),
                           ],
                         ),
                       ),
@@ -459,7 +507,11 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                           labelText: 'Estimated Duration (e.g., 1h 30m)',
                           border: OutlineInputBorder(),
                         ),
-                        onChanged: (value) => estimatedDuration = Duration(seconds: int.tryParse(value) ?? 0),
+                        onChanged:
+                            (value) =>
+                                estimatedDuration = Duration(
+                                  seconds: int.tryParse(value) ?? 0,
+                                ),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -484,7 +536,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    
                     if (selectedServiceTaskId.isNotEmpty &&
                         serviceName.isNotEmpty) {
                       // Create the service task (don't save to database yet)
@@ -504,6 +555,8 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         _services.add(serviceTask);
                         _serviceTaskNotes[serviceTask.id] = notes;
                       });
+
+                      _recalculateJobEstimatedDuration();
 
                       Navigator.of(context).pop();
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -653,6 +706,36 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           (model) => model.id == _selectedVehicleModel,
         );
 
+        final finalVehiclePlate =
+            _selectedVehiclePlate == 'others'
+                ? _vehiclePlateController.text
+                : _selectedVehiclePlate;
+
+        if (_selectedVehiclePlate == "others") {
+          final newCustomer = Customer(
+            id: '',
+            customerName: _customerNameController.text,
+            customerContact: _customerContactController.text,
+            vehiclePlate: finalVehiclePlate,
+            vehicleModel: _selectedVehicleModel,
+            vehicleBrand: _selectedVehicleBrand,
+            createdAt: DateTime.now(),
+          );
+          try {
+            await _customerService.createCustomer(newCustomer);
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error saving Customer to catalog: $e'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+            return;
+          }
+        }
+
         // Save new service tasks to database first (if they're new "Others" entries)
         for (final service in _services) {
           // Check if this is a new service task that should be added to catalog
@@ -691,7 +774,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             customerName: _customerNameController.text,
             customerContact: _customerContactController.text,
             vehicleModel: selectedModel.name,
-            vehiclePlate: _vehiclePlateController.text,
+            vehiclePlate: finalVehiclePlate,
             priority: _selectedPriority,
             status: _selectedStatus,
             scheduledDate: _scheduledDate,
@@ -707,7 +790,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
 
           // Use the improved createJob method
           await _jobService.createJob(
-            job, 
+            job,
             generalNoteText: _notesController.text,
             services: _services,
             serviceTaskNotes: _serviceTaskNotes,
@@ -731,7 +814,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             customerName: _customerNameController.text,
             customerContact: _customerContactController.text,
             vehicleModel: selectedModel.name,
-            vehiclePlate: _vehiclePlateController.text,
+            vehiclePlate: finalVehiclePlate,
             priority: _selectedPriority,
             status: _selectedStatus,
             scheduledDate: _scheduledDate,
@@ -768,6 +851,13 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           );
         }
       }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in all required fields'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -819,44 +909,81 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Customer Information
-              _buildSectionTitle('Customer Information'),
-              TextFormField(
-                controller: _customerNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Customer Name *',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter customer name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _customerContactController,
-                decoration: const InputDecoration(
-                  labelText: 'Customer Contact *',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter customer contact';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-
               // Vehicle Information
               _buildSectionTitle('Vehicle Information'),
               DropdownButtonFormField<String>(
                 value:
-                    _selectedVehicleBrand.isNotEmpty
-                        ? _selectedVehicleBrand
-                        : null,
+                    (() {
+                      final plateList =
+                          _customers.map((c) => c.vehiclePlate).toList();
+                      plateList.add('others');
+                      if (_selectedVehiclePlate.isNotEmpty &&
+                          plateList.contains(_selectedVehiclePlate)) {
+                        return _selectedVehiclePlate;
+                      }
+                      return null;
+                    })(),
+                decoration: const InputDecoration(
+                  labelText: 'Vehicle Plate *',
+                  border: OutlineInputBorder(),
+                ),
+                items: [
+                  ..._customers.map((customer) {
+                    return DropdownMenuItem(
+                      value: customer.vehiclePlate,
+                      child: Text(customer.vehiclePlate),
+                    );
+                  }).toList(),
+                  const DropdownMenuItem(
+                    value: 'others',
+                    child: Text('Others'),
+                  ),
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    _selectedVehiclePlate = value ?? '';
+                    _updateVehicleAndCustomerInfo();
+                  });
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please select a vehicle plate';
+                  }
+                  return null;
+                },
+              ),
+              // if 'Others' is selected.
+              if (_selectedVehiclePlate == 'others') ...[
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _vehiclePlateController,
+                  textCapitalization: TextCapitalization.characters,
+                  inputFormatters: [UpperCaseTextFormatter()],
+                  decoration: const InputDecoration(
+                    labelText: 'Vehicle Plate *',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter vehicle plate';
+                    }
+                    return null;
+                  },
+                ),
+              ],
+
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value:
+                    (() {
+                      final brandList =
+                          _vehicleBrands.map((b) => b.id).toList();
+                      if (_selectedVehicleBrand.isNotEmpty &&
+                          brandList.contains(_selectedVehicleBrand)) {
+                        return _selectedVehicleBrand;
+                      }
+                      return null;
+                    })(),
                 decoration: const InputDecoration(
                   labelText: 'Vehicle Brand *',
                   border: OutlineInputBorder(),
@@ -884,9 +1011,15 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 value:
-                    _selectedVehicleModel.isNotEmpty
-                        ? _selectedVehicleModel
-                        : null,
+                    (() {
+                      final modelList =
+                          _availableModels.map((m) => m.id).toList();
+                      if (_selectedVehicleModel.isNotEmpty &&
+                          modelList.contains(_selectedVehicleModel)) {
+                        return _selectedVehicleModel;
+                      }
+                      return null;
+                    })(),
                 decoration: const InputDecoration(
                   labelText: 'Vehicle Model *',
                   border: OutlineInputBorder(),
@@ -910,18 +1043,34 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                   return null;
                 },
               ),
+              const SizedBox(height: 24),
+
+              // Customer Information
+              _buildSectionTitle('Customer Information'),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _vehiclePlateController,
-                textCapitalization: TextCapitalization.characters,
-                inputFormatters: [UpperCaseTextFormatter()],
+                controller: _customerNameController,
                 decoration: const InputDecoration(
-                  labelText: 'Vehicle Plate *',
+                  labelText: 'Customer Name *',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter vehicle plate';
+                    return 'Please enter customer name';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _customerContactController,
+                decoration: const InputDecoration(
+                  labelText: 'Customer Contact *',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter customer contact';
                   }
                   return null;
                 },
@@ -1071,8 +1220,10 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         children: [
                           if (service.description.isNotEmpty)
                             Text('Description: ${service.description}'),
-                          Text('Cost: \${service.cost.toStringAsFixed(2)}'),
-                          Text('Duration: ${service.estimatedDuration}'),
+                          Text('Cost: ${service.cost.toStringAsFixed(2)}'),
+                          Text(
+                            'Duration: ${_formatDuration(service.estimatedDuration!)}',
+                          ),
                           if (serviceNotes.isNotEmpty) ...[
                             const SizedBox(height: 4),
                             Container(
@@ -1128,7 +1279,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
               // Parts Section
               _buildSectionTitle('Parts'),
               JobPartsSelector(
-                jobId: widget.jobData?.id ?? DateTime.now().millisecondsSinceEpoch.toString(),
+                jobId:
+                    widget.jobData?.id ??
+                    DateTime.now().millisecondsSinceEpoch.toString(),
                 selectedParts: _selectedParts,
                 onPartAdded: (part) {
                   setState(() {
@@ -1142,7 +1295,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                 },
                 onQuantityChanged: (partId, newQuantity) {
                   setState(() {
-                    final index = _selectedParts.indexWhere((p) => p.id == partId);
+                    final index = _selectedParts.indexWhere(
+                      (p) => p.id == partId,
+                    );
                     if (index != -1) {
                       final part = _selectedParts[index];
                       _selectedParts[index] = Part(
