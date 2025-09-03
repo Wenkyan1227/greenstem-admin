@@ -19,6 +19,17 @@ class _JobsScreenState extends State<JobsScreen> {
   String _selectedStatus = 'all';
   String _searchQuery = '';
   Map<String, String> _mechanicNames = {}; // Cache for mechanic names
+  String _formatDuration(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes % 60;
+    final s = d.inSeconds % 60;
+    List<String> parts = [];
+    if (h > 0) parts.add('${h}h');
+    if (m > 0) parts.add('${m}m');
+    if (s > 0) parts.add('${s}s');
+    if (parts.isEmpty) return '0s';
+    return parts.join(' ');
+  }
 
   @override
   void initState() {
@@ -337,7 +348,7 @@ class _JobsScreenState extends State<JobsScreen> {
                             ),
                             _buildDetailRow(
                               'Estimated Duration',
-                              '${displayJob.estimatedDuration} minutes',
+                              _formatDuration(displayJob.estimatedDuration),
                             ),
                             if (displayJob.completionDate != null)
                               _buildDetailRow(
@@ -362,35 +373,62 @@ class _JobsScreenState extends State<JobsScreen> {
                                 ),
                               ),
                               const SizedBox(height: 8),
-                              ...displayJob.notes.map(
-                                (note) => Padding(
-                                  padding: const EdgeInsets.only(
-                                    left: 16,
-                                    bottom: 4,
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        note.title,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                              ...(() {
+                                final nonEmptyNotes =
+                                    displayJob.notes
+                                        .where(
+                                          (note) => note.text.trim().isNotEmpty,
+                                        )
+                                        .toList();
+                                if (nonEmptyNotes.isEmpty) {
+                                  return [
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        left: 16,
+                                        bottom: 4,
                                       ),
-                                      Text(note.text),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Created at: ${DateFormat('MMM dd, yyyy').format(note.createdAt)}',
+                                      child: Text(
+                                        'No notes available.',
                                         style: TextStyle(
-                                          fontSize: 12,
                                           color: Colors.grey[600],
+                                          fontStyle: FontStyle.italic,
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                              ),
+                                    ),
+                                  ];
+                                }
+                                return nonEmptyNotes
+                                    .map(
+                                      (note) => Padding(
+                                        padding: const EdgeInsets.only(
+                                          left: 16,
+                                          bottom: 4,
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              note.title,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            Text(note.text),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Created at: ${DateFormat('MMM dd, yyyy').format(note.createdAt)}',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                    .toList();
+                              })(),
                             ],
 
                             if (displayJob.services.isNotEmpty) ...[
@@ -472,85 +510,6 @@ class _JobsScreenState extends State<JobsScreen> {
           Expanded(child: Text(value)),
         ],
       ),
-    );
-  }
-
-  void _showStatusUpdateDialog(Job job) {
-    String newStatus = job.status;
-    showDialog(
-      context: context,
-      builder:
-          (context) => StatefulBuilder(
-            builder: (context, setDialogState) {
-              return AlertDialog(
-                title: const Text('Update Job Status'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    ListTile(
-                      title: const Text('Pending'),
-                      leading: Radio<String>(
-                        value: 'pending',
-                        groupValue: newStatus,
-                        onChanged:
-                            (value) => setDialogState(() => newStatus = value!),
-                      ),
-                      onTap: () => setDialogState(() => newStatus = 'pending'),
-                    ),
-                    ListTile(
-                      title: const Text('In Progress'),
-                      leading: Radio<String>(
-                        value: 'in_progress',
-                        groupValue: newStatus,
-                        onChanged:
-                            (value) =>
-                                setDialogState(() => newStatus = 'in_progress'),
-                      ),
-                      onTap:
-                          () => setDialogState(() => newStatus = 'in_progress'),
-                    ),
-                    ListTile(
-                      title: const Text('Completed'),
-                      leading: Radio<String>(
-                        value: 'completed',
-                        groupValue: newStatus,
-                        onChanged:
-                            (value) =>
-                                setDialogState(() => newStatus = 'completed'),
-                      ),
-                      onTap:
-                          () => setDialogState(() => newStatus = 'completed'),
-                    ),
-                    ListTile(
-                      title: const Text('Cancelled'),
-                      leading: Radio<String>(
-                        value: 'cancelled',
-                        groupValue: newStatus,
-                        onChanged:
-                            (value) =>
-                                setDialogState(() => newStatus = 'cancelled'),
-                      ),
-                      onTap:
-                          () => setDialogState(() => newStatus = 'cancelled'),
-                    ),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _updateJobStatus(job.id, newStatus);
-                    },
-                    child: const Text('Update'),
-                  ),
-                ],
-              );
-            },
-          ),
     );
   }
 

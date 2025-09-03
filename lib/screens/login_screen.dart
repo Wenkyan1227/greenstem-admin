@@ -145,10 +145,11 @@ class _LoginScreenState extends State<LoginScreen>
                                   width: 1.5,
                                 ),
                               ),
-                              child: const Icon(
-                                Icons.admin_panel_settings,
-                                size: 60,
-                                color: Colors.white,
+                              child: Image.asset(
+                                'assets/GreenstemAdminIcon.png',
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
                               ),
                             ),
                             const SizedBox(height: 16),

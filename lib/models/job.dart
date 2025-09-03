@@ -18,7 +18,7 @@ class Job {
   final DateTime scheduledDate;
   final DateTime createdDate;
   final String imageUrl;
-  final String estimatedDuration;
+  final Duration estimatedDuration;
   final List<Note> notes;
   final String? customerSignature;
   final DateTime? completionDate;
@@ -49,7 +49,6 @@ class Job {
   factory Job.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
-
     return Job(
       id: doc.id,
       title: data['title'] ?? '',
@@ -72,7 +71,10 @@ class Job {
               ? (data['createdDate'] as Timestamp).toDate()
               : DateTime.parse(data['createdDate']),
       imageUrl: data['imageUrl'] ?? '',
-      estimatedDuration: data['estimatedDuration'] ?? '',
+      estimatedDuration:
+          data['estimatedDuration'] != null
+              ? Duration(seconds: data['estimatedDuration'])
+              : Duration.zero,
       customerSignature: data['customerSignature'] as String?,
       completionDate:
           data['completionDate'] != null
@@ -98,7 +100,7 @@ class Job {
       'scheduledDate': Timestamp.fromDate(scheduledDate),
       'createdDate': Timestamp.fromDate(createdDate),
       'imageUrl': imageUrl,
-      'estimatedDuration': estimatedDuration,
+      'estimatedDuration': estimatedDuration.inSeconds,
       'customerSignature': customerSignature,
       'completionDate':
           completionDate != null ? Timestamp.fromDate(completionDate!) : null,
@@ -115,14 +117,14 @@ class Job {
     String? customerContact,
     String? vehicleModel,
     String? vehiclePlate,
-    
+
     String? priority,
     String? status,
     List<ServiceTask>? services,
     DateTime? scheduledDate,
     DateTime? createdDate,
     String? imageUrl,
-    String? estimatedDuration,
+    Duration? estimatedDuration,
     List<Note>? notes,
     String? customerSignature,
     DateTime? completionDate,
@@ -152,25 +154,30 @@ class Job {
 
   // Load service tasks from subcollection
   static Future<List<ServiceTask>> loadServiceTasks(String jobId) async {
-    QuerySnapshot snapshot = await FirebaseFirestore.instance
-        .collection('jobs')
-        .doc(jobId)
-        .collection('service_tasks')
-        .get();
-    
+    QuerySnapshot snapshot =
+        await FirebaseFirestore.instance
+            .collection('jobs')
+            .doc(jobId)
+            .collection('service_tasks')
+            .get();
+
     return snapshot.docs
-        .map((doc) => ServiceTask.fromFirestoreData(doc.data() as Map<String, dynamic>))
+        .map(
+          (doc) =>
+              ServiceTask.fromFirestoreData(doc.data() as Map<String, dynamic>),
+        )
         .toList();
   }
 
   // Load parts from subcollection
   static Future<List<Part>> loadParts(String jobId) async {
-    QuerySnapshot snapshot = await FirebaseFirestore.instance
-        .collection('jobs')
-        .doc(jobId)
-        .collection('parts')
-        .get();
-    
+    QuerySnapshot snapshot =
+        await FirebaseFirestore.instance
+            .collection('jobs')
+            .doc(jobId)
+            .collection('parts')
+            .get();
+
     return snapshot.docs
         .map((doc) => Part.fromMap(doc.data() as Map<String, dynamic>))
         .toList();

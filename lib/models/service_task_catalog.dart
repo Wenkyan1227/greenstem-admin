@@ -3,7 +3,7 @@ class ServiceTaskCatalog {
   final String serviceName;       // e.g. "Oil Change"
   final String description;       // e.g. "Replace engine oil and filter"
   final double cost;              // e.g. 120.0
-  final String estimatedDuration; // e.g. "1h 30m"
+  final Duration estimatedDuration; // e.g. "1h 30m"
 
   ServiceTaskCatalog({
     required this.id,

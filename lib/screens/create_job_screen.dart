@@ -48,7 +48,32 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   String _selectedVehicleModel = '';
   DateTime _scheduledDate = DateTime.now();
   TimeOfDay _scheduledTime = TimeOfDay.now();
-  int _estimatedDuration = 60; // minutes
+  Duration _estimatedDuration = Duration.zero; 
+  String _formatDuration(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes % 60;
+    final s = d.inSeconds % 60;
+    List<String> parts = [];
+    if (h > 0) parts.add('${h}h');
+    if (m > 0) parts.add('${m}m');
+    if (s > 0) parts.add('${s}s');
+    if (parts.isEmpty) return '0s';
+    return parts.join(' ');
+  }
+
+  // Recalculate job estimated duration from all service tasks
+  void _recalculateJobEstimatedDuration() {
+    Duration total = Duration.zero;
+    for (final service in _services) {
+      if (service.estimatedDuration != null) {
+        total += service.estimatedDuration!;
+      }
+    }
+    setState(() {
+      _estimatedDuration = total;
+    });
+  }
+
   List<Part> _selectedParts = [];
 
   // Service tasks
@@ -89,7 +114,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     _selectedPriority = job.priority;
     _scheduledDate = job.scheduledDate;
     _scheduledTime = TimeOfDay.fromDateTime(job.scheduledDate);
-    _estimatedDuration = int.tryParse(job.estimatedDuration) ?? 60;
+    _estimatedDuration = job.estimatedDuration;
 
     // Load the job with full details including notes and service tasks
     Job? jobWithDetails = await _jobService.getJobWithDetails(job.id);
@@ -285,7 +310,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     String serviceName = '';
     String description = '';
     double cost = 0.0;
-    String estimatedDuration = '';
+    Duration estimatedDuration = Duration.zero;
     String notes = '';
 
     await showDialog(
@@ -336,7 +361,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                             serviceName = '';
                             description = '';
                             cost = 0.0;
-                            estimatedDuration = '';
+                            estimatedDuration = Duration.zero;
                           }
                         });
                       },
@@ -373,8 +398,8 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                             Text('Name: $serviceName'),
                             if (description.isNotEmpty)
                               Text('Description: $description'),
-                            Text('Cost: \${cost.toStringAsFixed(2)}'),
-                            Text('Duration: $estimatedDuration'),
+                            Text('Cost: ${cost.toStringAsFixed(2)}'),
+                            Text('Duration: ${_formatDuration(estimatedDuration)}'),
                           ],
                         ),
                       ),
@@ -434,7 +459,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                           labelText: 'Estimated Duration (e.g., 1h 30m)',
                           border: OutlineInputBorder(),
                         ),
-                        onChanged: (value) => estimatedDuration = value,
+                        onChanged: (value) => estimatedDuration = Duration(seconds: int.tryParse(value) ?? 0),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -528,7 +553,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     String serviceName = service.serviceName;
     String description = service.description;
     double cost = service.cost;
-    String estimatedDuration = service.estimatedDuration;
+    Duration estimatedDuration = service.estimatedDuration!;
     String notes = _serviceTaskNotes[service.id] ?? '';
 
     await showDialog(
@@ -564,7 +589,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                           Text('Name: $serviceName'),
                           if (description.isNotEmpty)
                             Text('Description: $description'),
-                          Text('Cost: \${cost.toStringAsFixed(2)}'),
+                          Text('Cost: ${cost.toStringAsFixed(2)}'),
                           Text('Duration: $estimatedDuration'),
                         ],
                       ),
@@ -638,7 +663,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
               serviceName: service.serviceName,
               description: service.description,
               cost: service.cost,
-              estimatedDuration: service.estimatedDuration,
+              estimatedDuration: service.estimatedDuration!,
             );
 
             try {
@@ -672,7 +697,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             scheduledDate: _scheduledDate,
             createdDate: DateTime.now(),
             imageUrl: selectedModel.imageUrl,
-            estimatedDuration: _estimatedDuration.toString(),
+            estimatedDuration: _estimatedDuration,
             assignedTo: selectedMechanic.id,
 
             // Exclude notes & services from main doc - will be stored in subcollections
@@ -710,7 +735,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             priority: _selectedPriority,
             status: _selectedStatus,
             scheduledDate: _scheduledDate,
-            estimatedDuration: _estimatedDuration.toString(),
+            estimatedDuration: _estimatedDuration,
             assignedTo: selectedMechanic.id,
           );
 
@@ -1002,21 +1027,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
               Row(
                 children: [
                   const Text('Estimated Duration: '),
-                  Expanded(
-                    child: Slider(
-                      value: _estimatedDuration.toDouble(),
-                      min: 15,
-                      max: 480,
-                      divisions: 31,
-                      label: '${_estimatedDuration} minutes',
-                      onChanged: (value) {
-                        setState(() {
-                          _estimatedDuration = value.round();
-                        });
-                      },
-                    ),
-                  ),
-                  Text('${_estimatedDuration} min'),
+                  Text(_formatDuration(_estimatedDuration)),
                 ],
               ),
               const SizedBox(height: 24),
