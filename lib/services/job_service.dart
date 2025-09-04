@@ -42,11 +42,12 @@ class JobService {
 
   // Generate next job ID with format J000X
   Future<String> _generateJobId() async {
-    QuerySnapshot snapshot = await _jobsCollection
-        .orderBy(FieldPath.documentId, descending: true)
-        .limit(1)
-        .get();
-    
+    QuerySnapshot snapshot =
+        await _jobsCollection
+            .orderBy(FieldPath.documentId, descending: true)
+            .limit(1)
+            .get();
+
     int nextNumber = 1;
     if (snapshot.docs.isNotEmpty) {
       String lastId = snapshot.docs.first.id;
@@ -55,7 +56,7 @@ class JobService {
         nextNumber = (int.tryParse(numberPart) ?? 0) + 1;
       }
     }
-    
+
     return 'J${nextNumber.toString().padLeft(4, '0')}';
   }
 
@@ -69,13 +70,15 @@ class JobService {
   }) async {
     // Generate custom job ID
     String jobId = await _generateJobId();
-    
+
     // Create the job document with custom ID
     DocumentReference docRef = _jobsCollection.doc(jobId);
+
     await docRef.set(job.copyWith(id: jobId).toFirestore());
-    
+    print(job.estimatedDuration);
+
     final batch = FirebaseFirestore.instance.batch();
-    
+
     // Always create a general note (even if empty)
     String generalNoteId = 'N${jobId}_GEN';
     Note generalNote = Note(
@@ -87,12 +90,15 @@ class JobService {
       photoUrls: [],
       serviceTaskId: null,
     );
-    batch.set(docRef.collection("notes").doc(generalNoteId), generalNote.toFirestore());
+    batch.set(
+      docRef.collection("notes").doc(generalNoteId),
+      generalNote.toFirestore(),
+    );
 
     // Add service tasks to subcollection with proper ID format ST000X_0X
     for (int i = 0; i < services.length; i++) {
       String taskId = 'ST${jobId}_${(i + 1).toString().padLeft(2, '0')}';
-      
+
       final taskWithId = ServiceTask(
         id: taskId,
         mechanicId: services[i].mechanicId,
@@ -107,13 +113,16 @@ class JobService {
         endTime: services[i].endTime,
         status: services[i].status,
       );
-      
-      batch.set(docRef.collection("service_tasks").doc(taskId), taskWithId.toFirestore());
-      
+
+      batch.set(
+        docRef.collection("service_tasks").doc(taskId),
+        taskWithId.toFirestore(),
+      );
+
       // Create note for this service task (get text from serviceTaskNotes map)
       String serviceNoteId = 'N${jobId}_$taskId';
       String serviceNoteText = serviceTaskNotes[services[i].id] ?? '';
-      
+
       Note serviceNote = Note(
         id: serviceNoteId,
         title: 'Service Task Notes - ${services[i].serviceName}',
@@ -123,8 +132,11 @@ class JobService {
         photoUrls: [],
         serviceTaskId: taskId,
       );
-      
-      batch.set(docRef.collection("notes").doc(serviceNoteId), serviceNote.toFirestore());
+
+      batch.set(
+        docRef.collection("notes").doc(serviceNoteId),
+        serviceNote.toFirestore(),
+      );
     }
 
     // Add parts to subcollection with proper ID format P000X_0X
@@ -133,7 +145,7 @@ class JobService {
       final partWithId = parts[i].copyWith(id: partId);
       batch.set(docRef.collection("parts").doc(partId), partWithId.toMap());
     }
-    
+
     await batch.commit();
   }
 
@@ -144,7 +156,7 @@ class JobService {
     // Remove subcollection data from main document
     jobData.remove('notes');
     jobData.remove('serviceTasks');
-    
+
     await _jobsCollection.doc(job.id).update(jobData);
   }
 
@@ -158,17 +170,17 @@ class JobService {
   }) async {
     final batch = FirebaseFirestore.instance.batch();
     final jobRef = _jobsCollection.doc(job.id);
-    
+
     // Update main job document
     Map<String, dynamic> jobData = job.toFirestore();
     jobData.remove('notes');
     jobData.remove('serviceTasks');
     batch.update(jobRef, jobData);
-    
+
     // Update general note
     if (generalNoteText != null) {
       String generalNoteId = 'N${job.id}_GEN';
-      
+
       Note generalNote = Note(
         id: generalNoteId,
         title: 'General Job Notes',
@@ -178,9 +190,12 @@ class JobService {
         photoUrls: [],
         serviceTaskId: null,
       );
-      batch.set(jobRef.collection('notes').doc(generalNoteId), generalNote.toFirestore());
+      batch.set(
+        jobRef.collection('notes').doc(generalNoteId),
+        generalNote.toFirestore(),
+      );
     }
-    
+
     // Update service tasks if provided
     if (services != null) {
       // First, delete existing service tasks and their notes
@@ -191,22 +206,25 @@ class JobService {
         String noteId = 'N${job.id}_${doc.id}';
         batch.delete(jobRef.collection('notes').doc(noteId));
       }
-      
+
       // Add new service tasks with proper ID format
       for (int i = 0; i < services.length; i++) {
         String taskId = 'ST${job.id}_${(i + 1).toString().padLeft(2, '0')}';
         final taskWithId = services[i].copyWith(id: taskId);
-        batch.set(jobRef.collection('service_tasks').doc(taskId), taskWithId.toFirestore());
-        
+        batch.set(
+          jobRef.collection('service_tasks').doc(taskId),
+          taskWithId.toFirestore(),
+        );
+
         // Create note for each service task
         String serviceNoteId = 'N${job.id}_$taskId';
         String serviceNoteText = '';
-        
+
         // Find corresponding note text if provided
         if (serviceTaskNotes != null) {
           serviceNoteText = serviceTaskNotes[services[i].id] ?? '';
         }
-        
+
         Note serviceNote = Note(
           id: serviceNoteId,
           title: 'Service Task Notes - ${services[i].serviceName}',
@@ -216,7 +234,10 @@ class JobService {
           photoUrls: [],
           serviceTaskId: taskId,
         );
-        batch.set(jobRef.collection('notes').doc(serviceNoteId), serviceNote.toFirestore());
+        batch.set(
+          jobRef.collection('notes').doc(serviceNoteId),
+          serviceNote.toFirestore(),
+        );
       }
     }
 
@@ -235,7 +256,7 @@ class JobService {
         batch.set(jobRef.collection('parts').doc(partId), partWithId.toMap());
       }
     }
-    
+
     await batch.commit();
   }
 
@@ -243,13 +264,13 @@ class JobService {
   Future<void> deleteJob(String jobId) async {
     final batch = FirebaseFirestore.instance.batch();
     final jobRef = _jobsCollection.doc(jobId);
-    
+
     // Delete notes subcollection
     final notes = await jobRef.collection('notes').get();
     for (final doc in notes.docs) {
       batch.delete(doc.reference);
     }
-    
+
     // Delete service_tasks subcollection
     final tasks = await jobRef.collection('service_tasks').get();
     for (final doc in tasks.docs) {
@@ -261,10 +282,10 @@ class JobService {
     for (final doc in parts.docs) {
       batch.delete(doc.reference);
     }
-    
+
     // Delete main job document
     batch.delete(jobRef);
-    
+
     await batch.commit();
   }
 
@@ -323,26 +344,37 @@ class JobService {
         await jobDoc.reference.collection("service_tasks").orderBy('id').get();
 
     // Convert into models
-    List<Note> notes = notesSnapshot.docs
-        .map((d) => Note.fromFirestoreData(d.data() as Map<String, dynamic>))
-        .toList();
+    List<Note> notes =
+        notesSnapshot.docs
+            .map(
+              (d) => Note.fromFirestoreData(d.data() as Map<String, dynamic>),
+            )
+            .toList();
 
-    List<ServiceTask> tasks = tasksSnapshot.docs
-        .map((d) => ServiceTask.fromFirestoreData(d.data() as Map<String, dynamic>))
-        .toList();
+    List<ServiceTask> tasks =
+        tasksSnapshot.docs
+            .map(
+              (d) => ServiceTask.fromFirestoreData(
+                d.data() as Map<String, dynamic>,
+              ),
+            )
+            .toList();
 
     // Return job with details
     return Job.fromFirestore(jobDoc).copyWith(notes: notes, services: tasks);
   }
 
   // Add individual note to job
-  Future<void> addNoteToJob(String jobId, Note note, {String? serviceTaskId}) async {
-    String noteId = serviceTaskId != null 
-        ? 'N${jobId}_$serviceTaskId' 
-        : 'N${jobId}_GEN';
-    
+  Future<void> addNoteToJob(
+    String jobId,
+    Note note, {
+    String? serviceTaskId,
+  }) async {
+    String noteId =
+        serviceTaskId != null ? 'N${jobId}_$serviceTaskId' : 'N${jobId}_GEN';
+
     final noteWithId = note.copyWith(id: noteId, serviceTaskId: serviceTaskId);
-    
+
     await _jobsCollection
         .doc(jobId)
         .collection("notes")
@@ -351,29 +383,28 @@ class JobService {
   }
 
   // Add individual service task to job
-  Future<void> addServiceTaskToJob(String jobId, ServiceTask task, {String noteText = ''}) async {
+  Future<void> addServiceTaskToJob(
+    String jobId,
+    ServiceTask task, {
+    String noteText = '',
+  }) async {
     // Get current service tasks count to generate proper ID with format ST000X_0X
-    final existingTasks = await _jobsCollection
-        .doc(jobId)
-        .collection('service_tasks')
-        .get();
-    
+    final existingTasks =
+        await _jobsCollection.doc(jobId).collection('service_tasks').get();
+
     int taskNumber = existingTasks.docs.length + 1;
     String taskId = 'ST${jobId}_${taskNumber.toString().padLeft(2, '0')}';
-    
+
     final taskWithId = task.copyWith(id: taskId);
-    
+
     final batch = FirebaseFirestore.instance.batch();
-    
+
     // Add the service task
     batch.set(
-      _jobsCollection
-          .doc(jobId)
-          .collection("service_tasks")
-          .doc(taskId),
+      _jobsCollection.doc(jobId).collection("service_tasks").doc(taskId),
       taskWithId.toFirestore(),
     );
-    
+
     // Always create a note for this service task with format N000X_ST000X_0X
     String noteId = 'N${jobId}_$taskId';
     final serviceNote = Note(
@@ -385,15 +416,12 @@ class JobService {
       photoUrls: [],
       serviceTaskId: taskId,
     );
-    
+
     batch.set(
-      _jobsCollection
-          .doc(jobId)
-          .collection("notes")
-          .doc(noteId),
+      _jobsCollection.doc(jobId).collection("notes").doc(noteId),
       serviceNote.toFirestore(),
     );
-    
+
     await batch.commit();
   }
 
@@ -416,64 +444,47 @@ class JobService {
   }
 
   // Update service task with note
-  Future<void> updateServiceTaskWithNote(String jobId, ServiceTask task, String noteText) async {
+  Future<void> updateServiceTaskWithNote(
+    String jobId,
+    ServiceTask task,
+    String noteText,
+  ) async {
     final batch = FirebaseFirestore.instance.batch();
-    
+
     // Update service task
     batch.update(
-      _jobsCollection
-          .doc(jobId)
-          .collection("service_tasks")
-          .doc(task.id),
+      _jobsCollection.doc(jobId).collection("service_tasks").doc(task.id),
       task.toFirestore(),
     );
-    
+
     // Update corresponding note
     String noteId = 'N${jobId}_${task.id}';
-    batch.update(
-      _jobsCollection
-          .doc(jobId)
-          .collection("notes")
-          .doc(noteId),
-      {
-        'text': noteText,
-        'updatedAt': Timestamp.now(),
-      },
-    );
-    
+    batch.update(_jobsCollection.doc(jobId).collection("notes").doc(noteId), {
+      'text': noteText,
+      'updatedAt': Timestamp.now(),
+    });
+
     await batch.commit();
   }
 
   // Delete individual note
   Future<void> deleteNote(String jobId, String noteId) async {
-    await _jobsCollection
-        .doc(jobId)
-        .collection("notes")
-        .doc(noteId)
-        .delete();
+    await _jobsCollection.doc(jobId).collection("notes").doc(noteId).delete();
   }
 
   // Delete individual service task and its note
   Future<void> deleteServiceTask(String jobId, String taskId) async {
     final batch = FirebaseFirestore.instance.batch();
-    
+
     // Delete service task
     batch.delete(
-      _jobsCollection
-          .doc(jobId)
-          .collection("service_tasks")
-          .doc(taskId),
+      _jobsCollection.doc(jobId).collection("service_tasks").doc(taskId),
     );
-    
+
     // Delete corresponding note
     String noteId = 'N${jobId}_$taskId';
-    batch.delete(
-      _jobsCollection
-          .doc(jobId)
-          .collection("notes")
-          .doc(noteId),
-    );
-    
+    batch.delete(_jobsCollection.doc(jobId).collection("notes").doc(noteId));
+
     await batch.commit();
   }
 
@@ -484,9 +495,12 @@ class JobService {
         .collection('notes')
         .orderBy('createdAt')
         .snapshots()
-        .map((snap) => snap.docs
-            .map((doc) => Note.fromFirestoreData(doc.data()))
-            .toList());
+        .map(
+          (snap) =>
+              snap.docs
+                  .map((doc) => Note.fromFirestoreData(doc.data()))
+                  .toList(),
+        );
   }
 
   // Get service tasks for a job
@@ -496,20 +510,20 @@ class JobService {
         .collection('service_tasks')
         .orderBy('id')
         .snapshots()
-        .map((snap) => snap.docs
-            .map((doc) => ServiceTask.fromFirestoreData(doc.data()))
-            .toList());
+        .map(
+          (snap) =>
+              snap.docs
+                  .map((doc) => ServiceTask.fromFirestoreData(doc.data()))
+                  .toList(),
+        );
   }
 
   // Get general note for a job
   Future<Note?> getGeneralNote(String jobId) async {
     String noteId = 'N${jobId}_GEN';
-    DocumentSnapshot doc = await _jobsCollection
-        .doc(jobId)
-        .collection('notes')
-        .doc(noteId)
-        .get();
-    
+    DocumentSnapshot doc =
+        await _jobsCollection.doc(jobId).collection('notes').doc(noteId).get();
+
     if (doc.exists) {
       return Note.fromFirestoreData(doc.data() as Map<String, dynamic>);
     }
@@ -519,12 +533,9 @@ class JobService {
   // Get note for a specific service task
   Future<Note?> getServiceTaskNote(String jobId, String serviceTaskId) async {
     String noteId = 'N${jobId}_$serviceTaskId';
-    DocumentSnapshot doc = await _jobsCollection
-        .doc(jobId)
-        .collection('notes')
-        .doc(noteId)
-        .get();
-    
+    DocumentSnapshot doc =
+        await _jobsCollection.doc(jobId).collection('notes').doc(noteId).get();
+
     if (doc.exists) {
       return Note.fromFirestoreData(doc.data() as Map<String, dynamic>);
     }

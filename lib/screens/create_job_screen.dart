@@ -110,7 +110,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
 
   void _loadJobDataForEdit() async {
     final job = widget.jobData!;
-    _titleController.text = job.title;
     _descriptionController.text = job.description;
     _customerNameController.text = job.customerName;
     _customerContactController.text = job.customerContact;
@@ -167,7 +166,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           }
         }
       }
-     
+
       // Load existing parts
       final parts = await Job.loadParts(job.id);
       setState(() {
@@ -358,6 +357,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     double cost = 0.0;
     Duration estimatedDuration = Duration.zero;
     String notes = '';
+    final GlobalKey<FormState> _dialogFormKey = GlobalKey<FormState>();
 
     await showDialog(
       context: context,
@@ -367,166 +367,194 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             return AlertDialog(
               title: const Text('Add Service Task'),
               content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Service Task Selection
-                    DropdownButtonFormField<String>(
-                      value:
-                          selectedServiceTaskId.isNotEmpty
-                              ? selectedServiceTaskId
-                              : null,
-                      decoration: const InputDecoration(
-                        labelText: 'Select Service Task *',
-                        border: OutlineInputBorder(),
-                      ),
-                      items: [
-                        ..._serviceTaskCatalog.map((task) {
-                          return DropdownMenuItem(
-                            value: task.id,
-                            child: Text(task.serviceName),
-                          );
-                        }).toList(),
-                        const DropdownMenuItem(
-                          value: 'others',
-                          child: Text('Others'),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        setState(() {
-                          selectedServiceTaskId = value ?? '';
-                          if (value != null && value != 'others') {
-                            final task = _serviceTaskCatalog.firstWhere(
-                              (t) => t.id == value,
-                            );
-                            serviceName = task.serviceName;
-                            description = task.description;
-                            cost = task.cost;
-                            estimatedDuration = task.estimatedDuration;
-                          } else if (value == 'others') {
-                            serviceName = '';
-                            description = '';
-                            cost = 0.0;
-                            estimatedDuration = Duration.zero;
-                          }
-                        });
-                      },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please select a service task';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Show details for existing service tasks
-                    if (selectedServiceTaskId.isNotEmpty &&
-                        selectedServiceTaskId != 'others') ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Service Details:',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey[700],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text('Name: $serviceName'),
-                            if (description.isNotEmpty)
-                              Text('Description: $description'),
-                            Text('Cost: ${cost.toStringAsFixed(2)}'),
-                            Text(
-                              'Duration: ${_formatDuration(estimatedDuration)}',
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // Service Name (for "Others" only)
-                    if (selectedServiceTaskId == 'others') ...[
-                      TextFormField(
+                child: Form(
+                  key: _dialogFormKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Service Task Selection
+                      DropdownButtonFormField<String>(
+                        value:
+                            selectedServiceTaskId.isNotEmpty
+                                ? selectedServiceTaskId
+                                : null,
                         decoration: const InputDecoration(
-                          labelText: 'Service Name *',
+                          labelText: 'Select Service Task *',
                           border: OutlineInputBorder(),
                         ),
-                        onChanged: (value) => serviceName = value,
+                        items: [
+                          ..._serviceTaskCatalog.map((task) {
+                            return DropdownMenuItem(
+                              value: task.id,
+                              child: Text(task.serviceName),
+                            );
+                          }).toList(),
+                          const DropdownMenuItem(
+                            value: 'others',
+                            child: Text('Others'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          setState(() {
+                            selectedServiceTaskId = value ?? '';
+                            if (value != null && value != 'others') {
+                              final task = _serviceTaskCatalog.firstWhere(
+                                (t) => t.id == value,
+                              );
+                              serviceName = task.serviceName;
+                              description = task.description;
+                              cost = task.cost;
+                              estimatedDuration = task.estimatedDuration;
+                            } else if (value == 'others') {
+                              serviceName = '';
+                              description = '';
+                              cost = 0.0;
+                              estimatedDuration = Duration.zero;
+                            }
+                          });
+                        },
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please enter service name';
+                            return 'Please select a service task';
                           }
                           return null;
                         },
                       ),
                       const SizedBox(height: 16),
-                    ],
 
-                    // Description (for "Others" only)
-                    if (selectedServiceTaskId == 'others') ...[
-                      TextFormField(
-                        decoration: const InputDecoration(
-                          labelText: 'Description',
-                          border: OutlineInputBorder(),
-                        ),
-                        maxLines: 2,
-                        onChanged: (value) => description = value,
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // Cost (for "Others" only)
-                    if (selectedServiceTaskId == 'others') ...[
-                      TextFormField(
-                        decoration: const InputDecoration(
-                          labelText: 'Cost',
-                          border: OutlineInputBorder(),
-                          prefixText: '\$',
-                        ),
-                        keyboardType: TextInputType.number,
-                        onChanged:
-                            (value) => cost = double.tryParse(value) ?? 0.0,
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // Estimated Duration (for "Others" only)
-                    if (selectedServiceTaskId == 'others') ...[
-                      TextFormField(
-                        decoration: const InputDecoration(
-                          labelText: 'Estimated Duration (e.g., 1h 30m)',
-                          border: OutlineInputBorder(),
-                        ),
-                        onChanged:
-                            (value) =>
-                                estimatedDuration = Duration(
-                                  seconds: int.tryParse(value) ?? 0,
+                      // Show details for existing service tasks
+                      if (selectedServiceTaskId.isNotEmpty &&
+                          selectedServiceTaskId != 'others') ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Service Details:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[700],
                                 ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text('Name: $serviceName'),
+                              if (description.isNotEmpty)
+                                Text('Description: $description'),
+                              Text('Cost: ${cost.toStringAsFixed(2)}'),
+                              Text(
+                                'Duration: ${_formatDuration(estimatedDuration)}',
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
 
-                    // Notes for this service task
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Notes for this service task',
-                        border: OutlineInputBorder(),
-                        hintText: 'Add specific notes for this service...',
+                      // Service Name (for "Others" only)
+                      if (selectedServiceTaskId == 'others') ...[
+                        TextFormField(
+                          decoration: const InputDecoration(
+                            labelText: 'Service Name *',
+                            border: OutlineInputBorder(),
+                          ),
+                          onChanged: (value) => serviceName = value,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter service name';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Description (for "Others" only)
+                      if (selectedServiceTaskId == 'others') ...[
+                        TextFormField(
+                          decoration: const InputDecoration(
+                            labelText: 'Description',
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 2,
+                          onChanged: (value) => description = value,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Cost (for "Others" only)
+                      if (selectedServiceTaskId == 'others') ...[
+                        TextFormField(
+                          decoration: const InputDecoration(
+                            labelText: 'Cost',
+                            border: OutlineInputBorder(),
+                            prefixText: '\$',
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged:
+                              (value) => cost = double.tryParse(value) ?? 0.0,
+                          validator: (value) {
+                            // Check if the input value is a valid integer
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter the cost';
+                            }
+                            // Try to parse the value as an integer
+                            final parsedValue = int.tryParse(value);
+                            if (parsedValue == null) {
+                              return 'Please enter a valid number'; // Error message for non-integer input
+                            }
+                            return null; // No error
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Estimated Duration (for "Others" only)
+                      if (selectedServiceTaskId == 'others') ...[
+                        TextFormField(
+                          decoration: const InputDecoration(
+                            labelText: 'Estimated Duration (in minutes)',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
+                          onChanged:
+                              (value) =>
+                                  estimatedDuration = Duration(
+                                    seconds: int.tryParse(value * 60) ?? 0,
+                                  ),
+                          validator: (value) {
+                            // Check if the input value is a valid integer
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter the duration';
+                            }
+                            // Try to parse the value as an integer
+                            final parsedValue = int.tryParse(value);
+                            if (parsedValue == null) {
+                              return 'Please enter a valid number'; // Error message for non-integer input
+                            }
+                            return null; // No error
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+
+                      // Notes for this service task
+                      TextFormField(
+                        decoration: const InputDecoration(
+                          labelText: 'Notes for this service task',
+                          border: OutlineInputBorder(),
+                          hintText: 'Add specific notes for this service...',
+                        ),
+                        maxLines: 3,
+                        onChanged: (value) => notes = value,
                       ),
-                      maxLines: 3,
-                      onChanged: (value) => notes = value,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               actions: [
@@ -536,42 +564,44 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    if (selectedServiceTaskId.isNotEmpty &&
-                        serviceName.isNotEmpty) {
-                      // Create the service task (don't save to database yet)
-                      // Use a temporary unique ID that will be replaced in JobService
-                      final serviceTask = ServiceTask(
-                        id: 'TEMP_${DateTime.now().millisecondsSinceEpoch}',
-                        mechanicId: mechanic.id,
-                        mechanicName: mechanic.name,
-                        serviceName: serviceName,
-                        description: description,
-                        cost: cost,
-                        estimatedDuration: estimatedDuration,
-                      );
+                    if (_dialogFormKey.currentState?.validate() ?? false) {
+                      if (selectedServiceTaskId.isNotEmpty &&
+                          serviceName.isNotEmpty) {
+                        // Create the service task (don't save to database yet)
+                        // Use a temporary unique ID that will be replaced in JobService
+                        final serviceTask = ServiceTask(
+                          id: 'TEMP_${DateTime.now().millisecondsSinceEpoch}',
+                          mechanicId: mechanic.id,
+                          mechanicName: mechanic.name,
+                          serviceName: serviceName,
+                          description: description,
+                          cost: cost,
+                          estimatedDuration: estimatedDuration,
+                        );
 
-                      // Add to services list and store the note using the temporary ID
-                      this.setState(() {
-                        _services.add(serviceTask);
-                        _serviceTaskNotes[serviceTask.id] = notes;
-                      });
+                        // Add to services list and store the note using the temporary ID
+                        this.setState(() {
+                          _services.add(serviceTask);
+                          _serviceTaskNotes[serviceTask.id] = notes;
+                        });
 
-                      _recalculateJobEstimatedDuration();
+                        _recalculateJobEstimatedDuration();
 
-                      Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Service task added successfully!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please fill in all required fields'),
-                          backgroundColor: Colors.orange,
-                        ),
-                      );
+                        Navigator.of(context).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Service task added successfully!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please fill in all required fields'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      }
                     }
                   },
                   child: const Text('Add'),
@@ -747,6 +777,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
               description: service.description,
               cost: service.cost,
               estimatedDuration: service.estimatedDuration!,
+              createdAt: DateTime.now(),
             );
 
             try {
@@ -769,7 +800,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           // Create new job
           final job = Job(
             id: '', // Firestore sets this
-            title: _titleController.text,
             description: _descriptionController.text,
             customerName: _customerNameController.text,
             customerContact: _customerContactController.text,
@@ -877,38 +907,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Basic Information
-              _buildSectionTitle('Basic Information'),
-              TextFormField(
-                controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Job Title *',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a job title';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Description *',
-                  border: OutlineInputBorder(),
-                ),
-                maxLines: 3,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a description';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-
               // Vehicle Information
               _buildSectionTitle('Vehicle Information'),
               DropdownButtonFormField<String>(
@@ -1077,33 +1075,29 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Job Details
+              // Basic Information
               _buildSectionTitle('Job Details'),
-              DropdownButtonFormField<String>(
-                value: _selectedStatus,
+              Text(
+                'Default Status: ${_selectedStatus.toUpperCase()}',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _descriptionController,
                 decoration: const InputDecoration(
-                  labelText: 'Status',
+                  labelText: 'Description *',
                   border: OutlineInputBorder(),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'pending', child: Text('Pending')),
-                  DropdownMenuItem(
-                    value: 'in_progress',
-                    child: Text('In Progress'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'completed',
-                    child: Text('Completed'),
-                  ),
-                  DropdownMenuItem(
-                    value: 'cancelled',
-                    child: Text('Cancelled'),
-                  ),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _selectedStatus = value ?? 'pending';
-                  });
+                maxLines: 3,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter the job description';
+                  }
+                  return null;
                 },
               ),
               const SizedBox(height: 16),
@@ -1156,17 +1150,43 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                 children: [
                   Expanded(
                     child: ListTile(
-                      title: const Text('Scheduled Date'),
+                      title: const Text(
+                        'Scheduled Date',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
                       subtitle: Text(
                         DateFormat('MMM dd, yyyy').format(_scheduledDate),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
                       ),
                       onTap: _selectDate,
                     ),
                   ),
                   Expanded(
                     child: ListTile(
-                      title: const Text('Scheduled Time'),
-                      subtitle: Text(_scheduledTime.format(context)),
+                      title: const Text(
+                        'Scheduled Time',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      subtitle: Text(
+                        _scheduledTime.format(context),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
                       onTap: _selectTime,
                     ),
                   ),
@@ -1175,8 +1195,22 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  const Text('Estimated Duration: '),
-                  Text(_formatDuration(_estimatedDuration)),
+                  const Text(
+                    'Estimated Duration: ',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  Text(
+                    _formatDuration(_estimatedDuration),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),

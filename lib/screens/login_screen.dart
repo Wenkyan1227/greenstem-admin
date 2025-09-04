@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/admin_service.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:greenstem_admin/services/notification_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -41,6 +44,47 @@ class _LoginScreenState extends State<LoginScreen>
     );
 
     _animationController.forward();
+    _setupFCM();
+  }
+
+  void _setupFCM() async {
+    final messaging = FirebaseMessaging.instance;
+    final auth = FirebaseAuth.instance;
+
+    // Request permissions from the user
+    await messaging.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+      sound: true,
+    );
+
+    // Get the FCM token and save it to Firestore when the user logs in.
+    // We use a listener to ensure we have the user's UID before saving.
+    auth.authStateChanges().listen((User? user) async {
+      if (user != null) {
+        String? fcmToken = await messaging.getToken();
+        if (fcmToken != null) {
+          // Save the token to the 'admins' collection
+          await FirebaseFirestore.instance
+              .collection('admins')
+              .doc(user.uid)
+              .set({'fcmToken': fcmToken}, SetOptions(merge: true));
+          print('FCM Token saved for Admin: ${user.uid}');
+        }
+
+        // Listen for token refreshes and update the database
+        messaging.onTokenRefresh.listen((newToken) {
+          FirebaseFirestore.instance.collection('admins').doc(user.uid).update({
+            'fcmToken': newToken,
+          });
+          print('FCM Token refreshed and updated for Admin: ${user.uid}');
+        });
+      }
+    });
   }
 
   @override
@@ -70,9 +114,11 @@ class _LoginScreenState extends State<LoginScreen>
         });
         return;
       }
-
-      // Success - navigate to dashboard
-      Navigator.pushReplacementNamed(context, '/dashboard');
+      if (mounted) {
+        NotificationService.startJobListener();
+        // Success - navigate to dashboard
+        Navigator.pushReplacementNamed(context, '/dashboard');
+      }
     } on FirebaseAuthException catch (e) {
       String errorMessage = 'Login failed. Please try again.';
 
@@ -245,7 +291,10 @@ class _LoginScreenState extends State<LoginScreen>
                                 alignment: Alignment.centerRight,
                                 child: TextButton(
                                   onPressed: () {
-                                    Navigator.pushNamed(context, '/forgot-password');
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/forgot-password',
+                                    );
                                   },
                                   child: const Text(
                                     'Forgot Password?',

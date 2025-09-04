@@ -5,7 +5,6 @@ import 'package:greenstem_admin/models/part.dart';
 
 class Job {
   final String id;
-  final String title;
   final String description;
   final String customerName;
   final String customerContact;
@@ -26,7 +25,6 @@ class Job {
 
   Job({
     required this.id,
-    required this.title,
     required this.description,
     required this.customerName,
     required this.customerContact,
@@ -51,7 +49,6 @@ class Job {
 
     return Job(
       id: doc.id,
-      title: data['title'] ?? '',
       description: data['description'] ?? '',
       customerName: data['customerName'] ?? '',
       customerContact: data['customerContact'] ?? '',
@@ -89,7 +86,6 @@ class Job {
   // Modified toFirestore to exclude subcollections from main document
   Map<String, dynamic> toFirestore() {
     return {
-      'title': title,
       'description': description,
       'customerName': customerName,
       'customerContact': customerContact,
@@ -132,7 +128,6 @@ class Job {
   }) {
     return Job(
       id: id ?? this.id,
-      title: title ?? this.title,
       description: description ?? this.description,
       customerName: customerName ?? this.customerName,
       customerContact: customerContact ?? this.customerContact,

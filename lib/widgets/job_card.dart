@@ -99,7 +99,7 @@ class JobCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      job.title,
+                      '${job.vehicleModel} - ${job.vehiclePlate}',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

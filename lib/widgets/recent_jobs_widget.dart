@@ -127,7 +127,7 @@ class RecentJobsWidget extends StatelessWidget {
         ),
       ),
       title: Text(
-        job.title,
+        job.vehiclePlate,
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
       subtitle: Column(

@@ -8,6 +8,8 @@ import 'screens/create_job_screen.dart';
 import 'screens/jobs_screen.dart';
 import 'screens/mechanics_screen.dart';
 import 'screens/forgot_password.dart';
+import 'package:greenstem_admin/services/notification_service.dart';
+
 // import 'services/vehicle_service.dart';
 // import 'services/service_task_catalog_service.dart';
 
@@ -22,7 +24,7 @@ void main() async {
   // Initialize default service data
   // final serviceTaskService = ServiceTaskCatalogService();
   // await serviceTaskService.addDummyServiceTasks();
-
+  await NotificationService.init();
   runApp(const MyApp());
 }
 
