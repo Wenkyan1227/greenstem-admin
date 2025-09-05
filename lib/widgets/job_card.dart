@@ -6,7 +6,19 @@ class JobCard extends StatelessWidget {
   final Job job;
   final VoidCallback? onTap;
   final Function(String)? onStatusChanged;
-  final String Function(String?)? getMechanicName; // Function to resolve mechanic ID to name
+  final String Function(String?)?
+  getMechanicName; // Function to resolve mechanic ID to name
+  String _formatDuration(Duration d) {
+    final h = d.inHours;
+    final m = d.inMinutes % 60;
+    final s = d.inSeconds % 60;
+    List<String> parts = [];
+    if (h > 0) parts.add('${h}h');
+    if (m > 0) parts.add('${m}m');
+    if (s > 0) parts.add('${s}s');
+    if (parts.isEmpty) return '0s';
+    return parts.join(' ');
+  }
 
   const JobCard({
     super.key,
@@ -27,6 +39,7 @@ class JobCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Color statusColor;
+    // ignore: unused_local_variable
     IconData statusIcon;
 
     switch (job.status) {
@@ -86,7 +99,7 @@ class JobCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      job.title,
+                      '${job.vehicleModel} - ${job.vehiclePlate}',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -213,7 +226,7 @@ class JobCard extends StatelessWidget {
                   const Icon(Icons.timer, size: 16, color: Colors.grey),
                   const SizedBox(width: 8),
                   Text(
-                    'Duration: ${job.estimatedDuration} minutes',
+                    'Duration: ${_formatDuration(job.estimatedDuration)}',
                     style: TextStyle(color: Colors.grey[600]),
                   ),
                 ],

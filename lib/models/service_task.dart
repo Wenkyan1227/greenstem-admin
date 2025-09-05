@@ -8,7 +8,7 @@ class ServiceTask {
   final String? mechanicPart;
   final String description;
   final double cost;
-  final String estimatedDuration;
+  final Duration? estimatedDuration;
   final Duration? actualDuration;
   final DateTime? startTime;
   final DateTime? endTime;
@@ -38,19 +38,22 @@ class ServiceTask {
       mechanicPart: data['mechanicPart'],
       description: data['description'] ?? '',
       cost: (data['cost'] ?? 0).toDouble(),
-      estimatedDuration: data['estimatedDuration']?.toString() ?? '',
+      estimatedDuration:
+          data['estimatedDuration'] != null
+              ? Duration(seconds: data['estimatedDuration'])
+              : Duration.zero,
       actualDuration:
-          data['actualDuration'] != null
-              ? Duration(seconds: data['actualDuration'])
-              : null,
+          data['duration'] != null
+              ? Duration(seconds: data['duration'])
+              : Duration.zero,
       startTime:
           data['startTime'] != null
-              ? (data['startTime'] is Timestamp 
+              ? (data['startTime'] is Timestamp
                   ? (data['startTime'] as Timestamp).toDate()
                   : DateTime.tryParse(data['startTime']))
               : null,
       endTime:
-          data['endTime'] != null 
+          data['endTime'] != null
               ? (data['endTime'] is Timestamp
                   ? (data['endTime'] as Timestamp).toDate()
                   : DateTime.tryParse(data['endTime']))
@@ -68,7 +71,7 @@ class ServiceTask {
       'mechanicPart': mechanicPart,
       'description': description,
       'cost': cost,
-      'estimatedDuration': estimatedDuration,
+      'estimatedDuration': estimatedDuration?.inSeconds,
       'actualDuration': actualDuration?.inSeconds,
       'startTime': startTime != null ? Timestamp.fromDate(startTime!) : null,
       'endTime': endTime != null ? Timestamp.fromDate(endTime!) : null,
@@ -91,7 +94,7 @@ class ServiceTask {
     String? mechanicPart,
     String? description,
     double? cost,
-    String? estimatedDuration,
+    Duration? estimatedDuration,
     Duration? actualDuration,
     DateTime? startTime,
     DateTime? endTime,
@@ -113,4 +116,3 @@ class ServiceTask {
     );
   }
 }
-

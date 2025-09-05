@@ -7,8 +7,6 @@ class Part {
   final String name;
   final double price;
   final int quantity;
-  final String description;
-  final String category;
   final DateTime addedAt;
 
   Part({
@@ -17,8 +15,6 @@ class Part {
     required this.name,
     required this.price,
     required this.quantity,
-    required this.description,
-    required this.category,
     DateTime? addedAt,
   }) : this.addedAt = addedAt ?? DateTime.now();
 
@@ -31,8 +27,6 @@ class Part {
       'name': name,
       'price': price,
       'quantity': quantity,
-      'description': description,
-      'category': category,
       'addedAt': addedAt.toIso8601String(),
     };
   }
@@ -44,8 +38,6 @@ class Part {
       name: map['name'] ?? '',
       price: (map['price'] ?? 0.0).toDouble(),
       quantity: map['quantity'] ?? 0,
-      description: map['description'] ?? '',
-      category: map['category'] ?? '',
       addedAt: DateTime.parse(map['addedAt']),
     );
   }
@@ -62,8 +54,6 @@ class Part {
       name: catalog.name,
       price: catalog.basePrice,
       quantity: quantity,
-      description: catalog.description,
-      category: catalog.category,
     );
   }
 
@@ -83,8 +73,6 @@ class Part {
       name: name ?? this.name,
       price: price ?? this.price,
       quantity: quantity ?? this.quantity,
-      description: description ?? this.description,
-      category: category ?? this.category,
       addedAt: addedAt ?? this.addedAt,
     );
   }

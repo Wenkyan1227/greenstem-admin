@@ -5,7 +5,6 @@ import 'package:greenstem_admin/models/part.dart';
 
 class Job {
   final String id;
-  final String title;
   final String description;
   final String customerName;
   final String customerContact;
@@ -18,7 +17,7 @@ class Job {
   final DateTime scheduledDate;
   final DateTime createdDate;
   final String imageUrl;
-  final String estimatedDuration;
+  final Duration estimatedDuration;
   final List<Note> notes;
   final String? customerSignature;
   final DateTime? completionDate;
@@ -26,7 +25,6 @@ class Job {
 
   Job({
     required this.id,
-    required this.title,
     required this.description,
     required this.customerName,
     required this.customerContact,
@@ -49,10 +47,8 @@ class Job {
   factory Job.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
-
     return Job(
       id: doc.id,
-      title: data['title'] ?? '',
       description: data['description'] ?? '',
       customerName: data['customerName'] ?? '',
       customerContact: data['customerContact'] ?? '',
@@ -72,7 +68,10 @@ class Job {
               ? (data['createdDate'] as Timestamp).toDate()
               : DateTime.parse(data['createdDate']),
       imageUrl: data['imageUrl'] ?? '',
-      estimatedDuration: data['estimatedDuration']?.toString() ?? '',
+      estimatedDuration:
+          data['estimatedDuration'] != null
+              ? Duration(seconds: data['estimatedDuration'])
+              : Duration.zero,
       customerSignature: data['customerSignature'] as String?,
       completionDate:
           data['completionDate'] != null
@@ -87,7 +86,6 @@ class Job {
   // Modified toFirestore to exclude subcollections from main document
   Map<String, dynamic> toFirestore() {
     return {
-      'title': title,
       'description': description,
       'customerName': customerName,
       'customerContact': customerContact,
@@ -98,7 +96,7 @@ class Job {
       'scheduledDate': Timestamp.fromDate(scheduledDate),
       'createdDate': Timestamp.fromDate(createdDate),
       'imageUrl': imageUrl,
-      'estimatedDuration': estimatedDuration,
+      'estimatedDuration': estimatedDuration.inSeconds,
       'customerSignature': customerSignature,
       'completionDate':
           completionDate != null ? Timestamp.fromDate(completionDate!) : null,
@@ -115,14 +113,14 @@ class Job {
     String? customerContact,
     String? vehicleModel,
     String? vehiclePlate,
-    
+
     String? priority,
     String? status,
     List<ServiceTask>? services,
     DateTime? scheduledDate,
     DateTime? createdDate,
     String? imageUrl,
-    String? estimatedDuration,
+    Duration? estimatedDuration,
     List<Note>? notes,
     String? customerSignature,
     DateTime? completionDate,
@@ -130,7 +128,6 @@ class Job {
   }) {
     return Job(
       id: id ?? this.id,
-      title: title ?? this.title,
       description: description ?? this.description,
       customerName: customerName ?? this.customerName,
       customerContact: customerContact ?? this.customerContact,
@@ -152,25 +149,30 @@ class Job {
 
   // Load service tasks from subcollection
   static Future<List<ServiceTask>> loadServiceTasks(String jobId) async {
-    QuerySnapshot snapshot = await FirebaseFirestore.instance
-        .collection('jobs')
-        .doc(jobId)
-        .collection('service_tasks')
-        .get();
-    
+    QuerySnapshot snapshot =
+        await FirebaseFirestore.instance
+            .collection('jobs')
+            .doc(jobId)
+            .collection('service_tasks')
+            .get();
+
     return snapshot.docs
-        .map((doc) => ServiceTask.fromFirestoreData(doc.data() as Map<String, dynamic>))
+        .map(
+          (doc) =>
+              ServiceTask.fromFirestoreData(doc.data() as Map<String, dynamic>),
+        )
         .toList();
   }
 
   // Load parts from subcollection
   static Future<List<Part>> loadParts(String jobId) async {
-    QuerySnapshot snapshot = await FirebaseFirestore.instance
-        .collection('jobs')
-        .doc(jobId)
-        .collection('parts')
-        .get();
-    
+    QuerySnapshot snapshot =
+        await FirebaseFirestore.instance
+            .collection('jobs')
+            .doc(jobId)
+            .collection('parts')
+            .get();
+
     return snapshot.docs
         .map((doc) => Part.fromMap(doc.data() as Map<String, dynamic>))
         .toList();

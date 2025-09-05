@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'admin_dashboard.dart';
 import 'jobs_screen.dart';
 import 'mechanics_screen.dart';
-import 'parts_catalog_screen.dart';
+import 'customers_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -18,7 +18,8 @@ class _MainNavigationState extends State<MainNavigation> {
     const AdminDashboard(),
     const JobsScreen(),
     const MechanicsScreen(),
-    const PartsCatalogScreen(),
+    const CustomerScreen
+    (),
   ];
 
   @override
@@ -50,8 +51,8 @@ class _MainNavigationState extends State<MainNavigation> {
             label: 'Mechanics',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.inventory),
-            label: 'Parts',
+            icon: Icon(Icons.people_alt),
+            label: 'Customers',
           ),
         ],
       ),
