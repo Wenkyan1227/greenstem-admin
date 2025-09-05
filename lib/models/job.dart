@@ -72,7 +72,7 @@ class Job {
               ? (data['createdDate'] as Timestamp).toDate()
               : DateTime.parse(data['createdDate']),
       imageUrl: data['imageUrl'] ?? '',
-      estimatedDuration: data['estimatedDuration'] ?? '',
+      estimatedDuration: data['estimatedDuration']?.toString() ?? '',
       customerSignature: data['customerSignature'] as String?,
       completionDate:
           data['completionDate'] != null

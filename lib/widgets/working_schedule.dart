@@ -115,7 +115,7 @@ class _WorkingScheduleWidgetState extends State<WorkingScheduleWidget> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.schedule, color: Theme.of(context).primaryColor),
+                    Icon(Icons.schedule, color: const Color(0xFF3C5C39)),
                     const SizedBox(width: 8),
                     Text(
                       "Working Schedule",
@@ -232,7 +232,7 @@ class _WorkingScheduleWidgetState extends State<WorkingScheduleWidget> {
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        backgroundColor: Theme.of(context).primaryColor,
+                        backgroundColor: const Color(0xFF3C5C39),
                       );
                     }).toList(),
               ),

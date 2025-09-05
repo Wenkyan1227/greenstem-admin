@@ -20,7 +20,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard'),
-        backgroundColor: const Color(0xFF29A87A),
+        backgroundColor: const Color(0xFF3C5C39),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -46,7 +46,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF29A87A), Color(0xFF20B2AA)],
+                  colors: [Color(0xFF3C5C39), Color(0xFF20B2AA)],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -161,7 +161,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 icon: const Icon(Icons.add),
                 label: const Text('Create New Job'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF29A87A),
+                  backgroundColor: const Color(0xFF3C5C39),
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(

@@ -45,7 +45,7 @@ class _MechanicsScreenState extends State<MechanicsScreen>
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
-        backgroundColor: const Color(0xFF29A87A),
+        backgroundColor: const Color(0xFF3C5C39),
         foregroundColor: Colors.white,
         elevation: 0,
         bottom: TabBar(

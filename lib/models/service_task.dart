@@ -38,7 +38,7 @@ class ServiceTask {
       mechanicPart: data['mechanicPart'],
       description: data['description'] ?? '',
       cost: (data['cost'] ?? 0).toDouble(),
-      estimatedDuration: data['estimatedDuration'] ?? '',
+      estimatedDuration: data['estimatedDuration']?.toString() ?? '',
       actualDuration:
           data['actualDuration'] != null
               ? Duration(seconds: data['actualDuration'])

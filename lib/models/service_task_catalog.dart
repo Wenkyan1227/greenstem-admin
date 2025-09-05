@@ -19,7 +19,7 @@ class ServiceTaskCatalog {
       serviceName: map['serviceName'] ?? '',
       description: map['description'] ?? '',
       cost: (map['cost'] ?? 0).toDouble(),
-      estimatedDuration: map['estimatedDuration'] ?? '',
+      estimatedDuration: map['estimatedDuration']?.toString() ?? '',
     );
   }
 

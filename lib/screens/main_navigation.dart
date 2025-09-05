@@ -34,7 +34,7 @@ class _MainNavigationState extends State<MainNavigation> {
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFF29A87A),
+        selectedItemColor: const Color(0xFF3C5C39),
         unselectedItemColor: Colors.grey[600],
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
         unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),

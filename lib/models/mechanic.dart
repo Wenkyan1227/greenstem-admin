@@ -16,10 +16,13 @@ class Mechanic {
   factory Mechanic.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return Mechanic(
-      id: doc.id, // Assuming Firestore document ID is used
+      id: doc.id,
       name: data['name'] ?? '',
       email: data['email'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt:
+          data['createdAt'] != null
+              ? (data['createdAt'] as Timestamp).toDate()
+              : DateTime.now(), // Provide a default value
     );
   }
 

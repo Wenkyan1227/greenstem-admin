@@ -24,6 +24,8 @@ class _PartsCatalogScreenState extends State<PartsCatalogScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Parts Catalog'),
+        backgroundColor: const Color(0xFF3C5C39),
+        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.add),

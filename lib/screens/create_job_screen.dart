@@ -751,7 +751,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.jobData == null ? 'Create New Job' : 'Edit Job'),
-        backgroundColor: const Color(0xFF29A87A),
+        backgroundColor: const Color(0xFF3C5C39),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -1031,7 +1031,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                       icon: const Icon(Icons.add),
                       label: const Text('Add Service Task'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF29A87A),
+                        backgroundColor: const Color(0xFF3C5C39),
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -1170,7 +1170,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                 child: ElevatedButton(
                   onPressed: _saveJob,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF29A87A),
+                    backgroundColor: const Color(0xFF3C5C39),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
@@ -1195,7 +1195,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
         style: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.bold,
-          color: Color(0xFF29A87A),
+          color: Color(0xFF3C5C39),
         ),
       ),
     );

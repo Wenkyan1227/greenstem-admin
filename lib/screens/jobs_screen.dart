@@ -51,7 +51,7 @@ class _JobsScreenState extends State<JobsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Jobs'),
-        backgroundColor: const Color(0xFF29A87A),
+        backgroundColor: const Color(0xFF3C5C39),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
@@ -193,7 +193,7 @@ class _JobsScreenState extends State<JobsScreen> {
             MaterialPageRoute(builder: (context) => const CreateJobScreen()),
           );
         },
-        backgroundColor: Colors.green[600],
+        backgroundColor: const Color(0xFF3C5C39),
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
@@ -209,8 +209,8 @@ class _JobsScreenState extends State<JobsScreen> {
           _selectedStatus = status;
         });
       },
-      selectedColor: Colors.green[100],
-      checkmarkColor: Colors.green[700],
+      selectedColor: const Color(0xFF3C5C39).withOpacity(0.2),
+      checkmarkColor: const Color(0xFF3C5C39),
     );
   }
 
@@ -414,7 +414,7 @@ class _JobsScreenState extends State<JobsScreen> {
                                       const Icon(
                                         Icons.check_circle,
                                         size: 16,
-                                        color: Colors.green,
+                                        color: const Color(0xFF3C5C39),
                                       ),
                                       const SizedBox(width: 8),
                                       Expanded(
@@ -563,7 +563,7 @@ class _JobsScreenState extends State<JobsScreen> {
             content: Text(
               'Job status updated to ${newStatus.replaceAll('_', ' ')}',
             ),
-            backgroundColor: Colors.green,
+            backgroundColor:const Color(0xFF3C5C39),
           ),
         );
       }
