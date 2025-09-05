@@ -11,7 +11,6 @@ import '../services/job_service.dart';
 import '../services/mechanic_service.dart';
 import '../services/vehicle_service.dart';
 import '../services/service_task_catalog_service.dart';
-import '../services/part_catalog_service.dart';
 import '../widgets/text_formatter.dart';
 import '../widgets/job_parts_selector.dart';
 import '../services/customer_service.dart';
@@ -32,7 +31,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   final VehicleService _vehicleService = VehicleService();
   final ServiceTaskCatalogService _serviceTaskService =
       ServiceTaskCatalogService();
-  final PartCatalogService _partService = PartCatalogService();
   final CustomerService _customerService = CustomerService();
 
   // Form controllers
@@ -1340,8 +1338,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         name: part.name,
                         price: part.price,
                         quantity: newQuantity,
-                        description: part.description,
-                        category: part.category,
                         addedAt: part.addedAt,
                       );
                     }

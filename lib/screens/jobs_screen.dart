@@ -160,7 +160,7 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
               child: ListTile(
                 title: Text(part.name),
                 subtitle: Text(
-                  '${part.description}\nPrice: \$${part.basePrice.toStringAsFixed(2)} | Stock: ${part.stockQuantity}',
+                  'Price: \$${part.basePrice.toStringAsFixed(2)} | Stock: ${part.stockQuantity}',
                 ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -271,8 +271,6 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
   void _showEditPartDialog(BuildContext context, PartCatalog part) {
     _name = part.name;
     _basePrice = part.basePrice;
-    _description = part.description;
-    _category = part.category;
     _stockQuantity = part.stockQuantity;
 
     showDialog(
@@ -309,28 +307,6 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
                                   : null,
                       onSaved:
                           (value) => _basePrice = double.parse(value ?? '0'),
-                    ),
-                    TextFormField(
-                      initialValue: part.description,
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                      ),
-                      validator:
-                          (value) =>
-                              value?.isEmpty ?? true
-                                  ? 'Description is required'
-                                  : null,
-                      onSaved: (value) => _description = value ?? '',
-                    ),
-                    TextFormField(
-                      initialValue: part.category,
-                      decoration: const InputDecoration(labelText: 'Category'),
-                      validator:
-                          (value) =>
-                              value?.isEmpty ?? true
-                                  ? 'Category is required'
-                                  : null,
-                      onSaved: (value) => _category = value ?? '',
                     ),
                     TextFormField(
                       initialValue: part.stockQuantity.toString(),
@@ -372,8 +348,6 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: _name,
         basePrice: _basePrice,
-        description: _description,
-        category: _category,
         stockQuantity: _stockQuantity,
       );
 
@@ -401,8 +375,6 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
         id: partId,
         name: _name,
         basePrice: _basePrice,
-        description: _description,
-        category: _category,
         stockQuantity: _stockQuantity,
       );
 
