@@ -1273,25 +1273,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
 
               // Service Tasks
               _buildSectionTitle('Service Tasks'),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _showAddServiceTaskDialog,
-                      icon: const Icon(Icons.add),
-                      label: const Text('Add Service Task'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF3C5C39),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
               if (_services.isNotEmpty) ...[
                 const Text(
                   'Added Services:',
@@ -1363,7 +1344,23 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                   );
                 })),
               ],
-
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _showAddServiceTaskDialog,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Service Task'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF3C5C39),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 24),
 
               // Parts Section
