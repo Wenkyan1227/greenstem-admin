@@ -43,7 +43,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
 
   // Form variables
   String _selectedStatus = 'pending';
-  String _selectedPriority = 'medium';
+  String _selectedPriority = 'not set yet';
   String _selectedMechanic = '';
   String _selectedVehicleBrand = '';
   String _selectedVehicleModel = '';
@@ -72,6 +72,36 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     }
     setState(() {
       _estimatedDuration = total;
+    });
+  }
+
+  void _examineJobPriority() {
+    // Combine _scheduledDate (DateTime) and _scheduledTime (TimeOfDay) into a single DateTime object
+    DateTime scheduledDateTime = DateTime(
+      _scheduledDate.year,
+      _scheduledDate.month,
+      _scheduledDate.day,
+      _scheduledTime.hour,
+      _scheduledTime.minute,
+    );
+
+    Duration remainingTime = scheduledDateTime.difference(DateTime.now());
+    Duration remainingWithBuffer = remainingTime - _estimatedDuration;
+    String _priority;
+
+    if (remainingWithBuffer.inHours <= 2) {
+      _priority = 'urgent';
+    } else if (remainingWithBuffer.inHours <= 8) {
+      _priority = 'high';
+    } else if (remainingWithBuffer.inHours <= 24) {
+      _priority = 'medium';
+    } else {
+      _priority = 'low';
+    }
+
+    // Update the priority
+    setState(() {
+      _selectedPriority = _priority;
     });
   }
 
@@ -298,41 +328,103 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   }
 
   Future<void> _selectDate() async {
+    // Show date picker
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _scheduledDate,
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
+
     if (picked != null) {
-      setState(() {
-        _scheduledDate = DateTime(
-          picked.year,
-          picked.month,
-          picked.day,
-          _scheduledTime.hour,
-          _scheduledTime.minute,
+      // Create the DateTime object combining picked date and current time
+      DateTime proposedDateTime = DateTime(
+        picked.year,
+        picked.month,
+        picked.day,
+        _scheduledTime.hour,
+        _scheduledTime.minute,
+      );
+
+      // Check if there is enough time for the estimated job duration
+      if (DateTime.now().add(_estimatedDuration).isBefore(proposedDateTime)) {
+        // If there's enough time, update _scheduledDate and call _examineJobPriority
+        setState(() {
+          _scheduledDate = proposedDateTime;
+        });
+        _examineJobPriority();
+      } else {
+        // Show a message if there's not enough time
+        showDialog(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text('Invalid Selection'),
+                content: const Text(
+                  'Not enough time for the estimated duration. Please choose a later date.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context); // Close the dialog
+                      _selectDate(); // Let the user repick the date
+                    },
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
         );
-      });
+      }
     }
   }
 
   Future<void> _selectTime() async {
+    // Show time picker
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: _scheduledTime,
     );
+
     if (picked != null) {
-      setState(() {
-        _scheduledTime = picked;
-        _scheduledDate = DateTime(
-          _scheduledDate.year,
-          _scheduledDate.month,
-          _scheduledDate.day,
-          picked.hour,
-          picked.minute,
+      // Create the DateTime object combining current date and selected time
+      DateTime proposedDateTime = DateTime(
+        _scheduledDate.year,
+        _scheduledDate.month,
+        _scheduledDate.day,
+        picked.hour,
+        picked.minute,
+      );
+
+      // Check if there is enough time for the estimated job duration
+      if (DateTime.now().add(_estimatedDuration).isBefore(proposedDateTime)) {
+        // If there's enough time, update _scheduledTime and call _examineJobPriority
+        setState(() {
+          _scheduledTime = picked;
+          _scheduledDate = proposedDateTime;
+        });
+        _examineJobPriority();
+      } else {
+        // Show a message if there's not enough time
+        showDialog(
+          context: context,
+          builder:
+              (context) => AlertDialog(
+                title: const Text('Invalid Selection'),
+                content: const Text(
+                  'Not enough time for the estimated duration. Please choose a later date.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context); // Close the dialog
+                      _selectTime(); // Let the user repick the date
+                    },
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
         );
-      });
+      }
     }
   }
 
@@ -618,6 +710,13 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       _services.removeAt(index);
       _serviceTaskNotes.remove(serviceToRemove.id);
     });
+    _recalculateJobEstimatedDuration();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Service task removed'),
+        backgroundColor: Colors.red,
+      ),
+    );
   }
 
   void _editServiceTask(int index) {
@@ -671,7 +770,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                           if (description.isNotEmpty)
                             Text('Description: $description'),
                           Text('Cost: ${cost.toStringAsFixed(2)}'),
-                          Text('Duration: $estimatedDuration'),
+                          Text(
+                            'Duration: ${_formatDuration(estimatedDuration)}',
+                          ),
                         ],
                       ),
                     ),
@@ -1075,15 +1176,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
 
               // Basic Information
               _buildSectionTitle('Job Details'),
-              Text(
-                'Default Status: ${_selectedStatus.toUpperCase()}',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(height: 16),
               TextFormField(
                 controller: _descriptionController,
                 decoration: const InputDecoration(
@@ -1096,25 +1188,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     return 'Please enter the job description';
                   }
                   return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _selectedPriority,
-                decoration: const InputDecoration(
-                  labelText: 'Priority',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'low', child: Text('Low')),
-                  DropdownMenuItem(value: 'medium', child: Text('Medium')),
-                  DropdownMenuItem(value: 'high', child: Text('High')),
-                  DropdownMenuItem(value: 'urgent', child: Text('Urgent')),
-                ],
-                onChanged: (value) {
-                  setState(() {
-                    _selectedPriority = value ?? 'medium';
-                  });
                 },
               ),
               const SizedBox(height: 16),
@@ -1146,51 +1219,36 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Expanded(
-                    child: ListTile(
-                      title: const Text(
-                        'Scheduled Date',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      subtitle: Text(
-                        DateFormat('MMM dd, yyyy').format(_scheduledDate),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      onTap: _selectDate,
-                    ),
-                  ),
-                  Expanded(
-                    child: ListTile(
-                      title: const Text(
-                        'Scheduled Time',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      subtitle: Text(
-                        _scheduledTime.format(context),
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                      ),
-                      onTap: _selectTime,
+                  Text(
+                    'Default Status: ${_selectedStatus.toUpperCase()}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const Text(
+                    'Job Priority: ',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  Text(
+                    _selectedPriority.toUpperCase(),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
+              ),
               Row(
                 children: [
                   const Text(
@@ -1357,6 +1415,147 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                   hintText: 'Add general notes about the job...',
                 ),
                 maxLines: 3,
+              ),
+              const SizedBox(height: 24),
+
+              _buildSectionTitle('Scheduled Date & Time'),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        if (_estimatedDuration.inMinutes == 0) {
+                          // If no estimated duration, show a message to ask the user to add a service task
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text(
+                                'Please add a service task before setting the scheduled time.',
+                              ),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        } else {
+                          // Proceed with selecting the date if there's an estimated duration
+                          _selectDate();
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey, // Border color
+                            width: 1.0, // Border width
+                          ),
+                          borderRadius: BorderRadius.circular(
+                            8,
+                          ), // Rounded corners
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.calendar_today,
+                              color: Colors.black,
+                            ),
+                            const SizedBox(width: 10),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Scheduled Date',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                Text(
+                                  DateFormat(
+                                    'MMM dd, yyyy',
+                                  ).format(_scheduledDate),
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        if (_estimatedDuration.inMinutes == 0) {
+                          // If no estimated duration, show a message to ask the user to add a service task
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text(
+                                'Please add a service task before setting the scheduled time.',
+                              ),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        } else {
+                          // Proceed with selecting the date if there's an estimated duration
+                          _selectTime();
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: Colors.grey, // Border color
+                            width: 1.0, // Border width
+                          ),
+                          borderRadius: BorderRadius.circular(
+                            8,
+                          ), // Rounded corners
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.access_time, color: Colors.black),
+                            const SizedBox(width: 10),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Scheduled Time',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                Text(
+                                  _scheduledTime.format(context),
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 32),
 
