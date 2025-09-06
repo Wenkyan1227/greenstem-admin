@@ -68,10 +68,18 @@ class Job {
               ? (data['createdDate'] as Timestamp).toDate()
               : DateTime.parse(data['createdDate']),
       imageUrl: data['imageUrl'] ?? '',
-      estimatedDuration:
-          data['estimatedDuration'] != null
-              ? Duration(seconds: data['estimatedDuration'])
-              : Duration.zero,
+      estimatedDuration: () {
+        final value = data['estimatedDuration'];
+        if (value == null) return Duration.zero;
+
+        if (value is int) {
+          return Duration(seconds: value);
+        } else if (value is String) {
+          return Duration(seconds: int.tryParse(value) ?? 0);
+        } else {
+          return Duration.zero;
+        }
+      }(),
       customerSignature: data['customerSignature'] as String?,
       completionDate:
           data['completionDate'] != null

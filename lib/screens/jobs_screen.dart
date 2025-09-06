@@ -160,7 +160,7 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
               child: ListTile(
                 title: Text(part.name),
                 subtitle: Text(
-                  'Price: \$${part.basePrice.toStringAsFixed(2)} | Stock: ${part.stockQuantity}',
+                  'Price: RM ${part.basePrice.toStringAsFixed(2)} | Stock: ${part.stockQuantity}',
                 ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -492,7 +492,13 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
               }
 
               if (snapshot.hasError) {
+                debugPrint('🔥 Jobs stream error: ${snapshot.error}');
+                debugPrintStack(stackTrace: snapshot.stackTrace);
                 return Center(child: Text('Error: ${snapshot.error}'));
+              }
+
+              if (snapshot.hasData) {
+                debugPrint('✅ Jobs snapshot received: ${snapshot.data}');
               }
 
               final jobs = snapshot.data ?? [];
@@ -979,7 +985,7 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
             content: Text(
               'Job status updated to ${newStatus.replaceAll('_', ' ')}',
             ),
-            backgroundColor:const Color(0xFF3C5C39),
+            backgroundColor: const Color(0xFF3C5C39),
           ),
         );
       }
