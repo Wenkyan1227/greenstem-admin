@@ -7,7 +7,7 @@ class ServiceTaskCatalogService {
 
   // Generate next service task ID with format J000X
   Future<String> _generateServiceTaskId() async {
-    QuerySnapshot snapshot =
+    QuerySnapshot snapshot =  
         await _serviceTaskCollection
             .orderBy(FieldPath.documentId, descending: true)
             .limit(1)
@@ -16,13 +16,13 @@ class ServiceTaskCatalogService {
     int nextNumber = 1;
     if (snapshot.docs.isNotEmpty) {
       String lastId = snapshot.docs.first.id;
-      if (lastId.startsWith('J')) {
-        String numberPart = lastId.substring(1);
+      if (lastId.startsWith('ST')) {
+        String numberPart = lastId.substring(2);
         nextNumber = (int.tryParse(numberPart) ?? 0) + 1;
       }
     }
 
-    return 'J${nextNumber.toString().padLeft(4, '0')}';
+    return 'ST${nextNumber.toString().padLeft(4, '0')}';
   }
 
   // Fetch all service tasks
@@ -55,69 +55,100 @@ class ServiceTaskCatalogService {
     }
   }
 
+  Future<void> updateServiceTask(ServiceTaskCatalog task) async {
+    try {
+      await _serviceTaskCollection.doc(task.id).update(task.toFirestore());
+      print("✅ Service task updated successfully");
+    } catch (e) {
+      print("❌ Error updating service task: $e");
+    }
+  }
+
+  Future<void> deleteServiceTask(String id) async {
+    try {
+      await _serviceTaskCollection.doc(id).delete();
+      print("✅ Service task deleted successfully");
+    } catch (e) {
+      print("❌ Error deleting service task: $e");
+    }
+  }
+
   Future<void> addDummyServiceTasks() async {
     List<Map<String, dynamic>> dummyTasks = [
       {
-        "cost": 50,
+        "cost": 50.0,
         "description": "Change engine oil and oil filter",
-        "estimatedDuration": 3600,
+        "estimatedDuration": Duration(seconds: 3600),
         "serviceName": "Oil Change",
       },
       {
-        "cost": 120,
+        "cost": 120.0,
         "description": "Replace front brake pads and inspect rotors",
-        "estimatedDuration": 7200,
+        "estimatedDuration": Duration(seconds: 7200),
         "serviceName": "Brake Pad Replacement",
       },
       {
-        "cost": 80,
+        "cost": 80.0,
         "description": "Rotate tires and check for uneven wear",
-        "estimatedDuration": 2700,
+        "estimatedDuration": Duration(seconds: 2700),
         "serviceName": "Tire Rotation",
       },
       {
-        "cost": 150,
+        "cost": 150.0,
         "description": "Replace car battery and perform charging system test",
-        "estimatedDuration": 5400,
+        "estimatedDuration": Duration(seconds: 5400),
         "serviceName": "Battery Replacement",
       },
       {
-        "cost": 200,
+        "cost": 200.0,
         "description":
             "Perform engine diagnostics and troubleshoot error codes",
-        "estimatedDuration": 7200,
+        "estimatedDuration": Duration(seconds: 7200),
         "serviceName": "Engine Diagnostics",
       },
       {
-        "cost": 60,
+        "cost": 60.0,
         "description": "Replace windshield wipers and check washer fluid",
-        "estimatedDuration": 1800,
+        "estimatedDuration": Duration(seconds: 1800),
         "serviceName": "Wiper Replacement",
       },
       {
-        "cost": 90,
+        "cost": 90.0,
         "description": "Replace air filter and check intake system",
-        "estimatedDuration": 3600,
+        "estimatedDuration": Duration(seconds: 600),
         "serviceName": "Air Filter Replacement",
       },
       {
-        "cost": 180,
+        "cost": 180.0,
         "description": "Flush and replace transmission fluid",
-        "estimatedDuration": 9000,
+        "estimatedDuration": Duration(seconds: 9000),
         "serviceName": "Transmission Fluid Service",
       },
       {
-        "cost": 220,
+        "cost": 220.0,
         "description": "Replace spark plugs and inspect ignition system",
-        "estimatedDuration": 10800,
+        "estimatedDuration": Duration(seconds: 10800),
         "serviceName": "Spark Plug Replacement",
       },
       {
-        "cost": 300,
+        "cost": 300.0,
         "description": "Replace timing belt and inspect water pump",
-        "estimatedDuration": 18000,
+        "estimatedDuration": Duration(seconds: 18000),
         "serviceName": "Timing Belt Replacement",
       },
     ];
+
+    for (var taskData in dummyTasks) {
+      String id = await _generateServiceTaskId();
+      final task = ServiceTaskCatalog(
+        id: id,
+        serviceName: taskData['serviceName'],
+        cost: taskData['cost'],
+        description: taskData['description'],
+        estimatedDuration: taskData['estimatedDuration'],
+        createdAt: DateTime.now(),
+      );
+      await addServiceTask(task);
+    }
   }
 }

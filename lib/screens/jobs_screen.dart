@@ -7,6 +7,8 @@ import '../services/mechanic_service.dart';
 import '../widgets/job_card.dart';
 import '../models/part_catalog.dart';
 import '../services/part_catalog_service.dart';
+import '../models/service_task_catalog.dart';
+import '../services/service_task_catalog_service.dart';
 
 class JobsScreen extends StatefulWidget {
   const JobsScreen({super.key});
@@ -18,6 +20,8 @@ class JobsScreen extends StatefulWidget {
 class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
   final JobService _jobService = JobService();
   final MechanicService _mechanicService = MechanicService();
+  final ServiceTaskCatalogService _serviceTaskService =
+      ServiceTaskCatalogService();
   String _selectedStatus = 'all';
   String _searchQuery = '';
   Map<String, String> _mechanicNames = {}; // Cache for mechanic names
@@ -40,14 +44,17 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
 
   String _name = '';
   double _basePrice = 0.0;
-  String _description = '';
-  String _category = '';
   int _stockQuantity = 0;
+
+  String _serviceName = '';
+  double _cost = 0.0;
+  String _serviceDescription = '';
+  Duration _estimatedDuration = Duration.zero;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       setState(() {}); // Trigger rebuild when tab changes
     });
@@ -90,6 +97,7 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
           tabs: const [
             Tab(icon: Icon(Icons.work), text: 'Jobs'),
             Tab(icon: Icon(Icons.inventory), text: 'Parts'),
+            Tab(icon: Icon(Icons.build), text: 'Service Tasks'),
           ],
         ),
         actions: [
@@ -107,6 +115,12 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
               onPressed: () => _showAddPartDialog(context),
             ),
           ],
+          if (_tabController.index == 2) ...[
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () => _showAddServiceTaskDialog(context),
+            ),
+          ],
         ],
       ),
       body: TabBarView(
@@ -117,6 +131,9 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
 
           // Tab 2: Part Catalog
           _buildPartsTab(),
+
+          // Tab 3: Service Task Management
+          _buildServiceTaskTab(),
         ],
       ),
       floatingActionButton:
@@ -134,6 +151,333 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
                 child: const Icon(Icons.add, color: Colors.white),
               )
               : null,
+    );
+  }
+
+  Widget _buildServiceTaskTab() {
+    return StreamBuilder<List<ServiceTaskCatalog>>(
+      stream: _serviceTaskService.getAllServiceTasks(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final serviceTasks = snapshot.data!;
+
+        return ListView.builder(
+          itemCount: serviceTasks.length,
+          itemBuilder: (context, index) {
+            final serviceTask = serviceTasks[index];
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ListTile(
+                title: Text(serviceTask.serviceName),
+                subtitle: Text(
+                  'Cost: RM ${serviceTask.cost.toStringAsFixed(2)} | Estimated Time: ${_formatDuration(serviceTask.estimatedDuration)}',
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit),
+                      onPressed:
+                          () =>
+                              _showEditServiceTaskDialog(context, serviceTask),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete),
+                      onPressed:
+                          () => _confirmDeleteServiceTask(context, serviceTask),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showAddServiceTaskDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Add New Service Task'),
+            content: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      decoration: const InputDecoration(labelText: 'Name'),
+                      validator:
+                          (value) =>
+                              value?.isEmpty ?? true
+                                  ? 'Service Name is required'
+                                  : null,
+                      onSaved: (value) => _serviceName = value ?? '',
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Cost Price',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator:
+                          (value) =>
+                              value?.isEmpty ?? true
+                                  ? 'Cost is required'
+                                  : null,
+                      onSaved:
+                          (value) => _cost = double.parse(value ?? '0'),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                      ),
+                      validator:
+                          (value) =>
+                              value?.isEmpty ?? true
+                                  ? 'Description is required'
+                                  : null,
+                      onSaved: (value) => _serviceDescription = value ?? '',
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      decoration: const InputDecoration(
+                        labelText: 'Estimated Duration (in minutes)',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator:
+                          (value) =>
+                              value?.isEmpty ?? true
+                                  ? 'Estimated duration is required'
+                                  : null,
+                      onSaved: (value) =>
+                          _estimatedDuration = Duration(seconds: int.tryParse(value!*60) ?? 0),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => _saveServiceTask(context),
+                child: const Text('Save'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _showEditServiceTaskDialog(
+    BuildContext context,
+    ServiceTaskCatalog serviceTask,
+  ) {
+    _name = serviceTask.serviceName;
+    _basePrice = serviceTask.cost;
+
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Edit Service Task'),
+            content: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      initialValue: serviceTask.serviceName,
+                      decoration: const InputDecoration(
+                        labelText: 'Service Name',
+                      ),
+                      validator:
+                          (value) =>
+                              value?.isEmpty ?? true
+                                  ? 'Service Name is required'
+                                  : null,
+                      onSaved: (value) => _name = value ?? '',
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      initialValue: serviceTask.cost.toString(),
+                      decoration: const InputDecoration(
+                        labelText: 'Cost Price',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator:
+                          (value) =>
+                              value?.isEmpty ?? true
+                                  ? 'Cost Price is required'
+                                  : null,
+                      onSaved:
+                          (value) => _basePrice = double.parse(value ?? '0'),
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      initialValue: serviceTask.description,
+                      decoration: const InputDecoration(
+                        labelText: 'Description',
+                      ),
+                      validator:
+                          (value) =>
+                              value?.isEmpty ?? true
+                                  ? 'Description is required'
+                                  : null,
+                      onSaved: (value) => _serviceDescription = value ?? '',
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      initialValue:
+                          (serviceTask.estimatedDuration.inMinutes).toString(),
+                      decoration: const InputDecoration(
+                        labelText: 'Estimated Duration (in minutes)',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator:
+                          (value) =>
+                              value?.isEmpty ?? true
+                                  ? 'Estimated duration is required'
+                                  : null,
+                      onSaved: (value) => _estimatedDuration =
+                          Duration(seconds: int.tryParse(value!*60) ?? 0),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () => _updateServiceTask(context, serviceTask.id),
+                child: const Text('Update'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  void _saveServiceTask(BuildContext context) {
+    if (_formKey.currentState?.validate() ?? false) {
+      _formKey.currentState?.save();
+
+      final serviceTask = ServiceTaskCatalog(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        serviceName: _name,
+        cost: _cost,
+        description: _serviceDescription,
+        estimatedDuration: _estimatedDuration,
+        createdAt: DateTime.now(),
+      );
+
+      _serviceTaskService
+          .addServiceTask(serviceTask)
+          .then((_) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Service task added successfully')),
+            );
+          })
+          .catchError((error) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error adding service task: $error')),
+            );
+          });
+    }
+  }
+
+  void _updateServiceTask(BuildContext context, String serviceTaskId) {
+    if (_formKey.currentState?.validate() ?? false) {
+      _formKey.currentState?.save();
+
+      final serviceTask = ServiceTaskCatalog(
+        id: serviceTaskId,
+        serviceName: _serviceName,
+        cost: _cost,
+        description: _serviceDescription,
+        estimatedDuration: _estimatedDuration,
+        createdAt: DateTime.now(),
+      );
+
+      _serviceTaskService
+          .updateServiceTask(serviceTask)
+          .then((_) {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Service task updated successfully'),
+              ),
+            );
+          })
+          .catchError((error) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error updating service task: $error')),
+            );
+          });
+    }
+  }
+
+  void _confirmDeleteServiceTask(
+    BuildContext context,
+    ServiceTaskCatalog serviceTask,
+  ) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Delete Service Task'),
+            content: Text(
+              'Are you sure you want to delete Service Task: ${serviceTask.serviceName}?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                onPressed: () {
+                  _serviceTaskService
+                      .deleteServiceTask(serviceTask.id)
+                      .then((_) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Service task deleted successfully'),
+                          ),
+                        );
+                      })
+                      .catchError((error) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Error deleting service task: $error',
+                            ),
+                          ),
+                        );
+                      });
+                },
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
     );
   }
 
@@ -204,6 +548,7 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
                                   : null,
                       onSaved: (value) => _name = value ?? '',
                     ),
+                    const SizedBox(height: 16),
                     TextFormField(
                       decoration: const InputDecoration(
                         labelText: 'Base Price',
@@ -217,26 +562,7 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
                       onSaved:
                           (value) => _basePrice = double.parse(value ?? '0'),
                     ),
-                    TextFormField(
-                      decoration: const InputDecoration(
-                        labelText: 'Description',
-                      ),
-                      validator:
-                          (value) =>
-                              value?.isEmpty ?? true
-                                  ? 'Description is required'
-                                  : null,
-                      onSaved: (value) => _description = value ?? '',
-                    ),
-                    TextFormField(
-                      decoration: const InputDecoration(labelText: 'Category'),
-                      validator:
-                          (value) =>
-                              value?.isEmpty ?? true
-                                  ? 'Category is required'
-                                  : null,
-                      onSaved: (value) => _category = value ?? '',
-                    ),
+                    const SizedBox(height: 16),
                     TextFormField(
                       decoration: const InputDecoration(
                         labelText: 'Stock Quantity',
@@ -294,6 +620,7 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
                                   : null,
                       onSaved: (value) => _name = value ?? '',
                     ),
+                    const SizedBox(height: 16),
                     TextFormField(
                       initialValue: part.basePrice.toString(),
                       decoration: const InputDecoration(
@@ -308,6 +635,7 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
                       onSaved:
                           (value) => _basePrice = double.parse(value ?? '0'),
                     ),
+                    const SizedBox(height: 16),
                     TextFormField(
                       initialValue: part.stockQuantity.toString(),
                       decoration: const InputDecoration(
