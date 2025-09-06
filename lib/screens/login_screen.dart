@@ -44,10 +44,9 @@ class _LoginScreenState extends State<LoginScreen>
     );
 
     _animationController.forward();
-    _setupFCM();
   }
 
-  void _setupFCM() async {
+  Future<void> _setupFCM() async {
     final messaging = FirebaseMessaging.instance;
     final auth = FirebaseAuth.instance;
 
@@ -115,6 +114,7 @@ class _LoginScreenState extends State<LoginScreen>
         return;
       }
       if (mounted) {
+        await _setupFCM();
         NotificationService.startJobListener();
         // Success - navigate to dashboard
         Navigator.pushReplacementNamed(context, '/dashboard');

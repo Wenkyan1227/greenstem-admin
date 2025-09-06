@@ -53,9 +53,6 @@ class AdminService {
     required String email,
     required String password,
   }) async {
-    // Check if the email is "admin@gmail.com"
-
-
     // Sign in with Firebase Auth
     try {
       final userCredential = await _auth.signInWithEmailAndPassword(
