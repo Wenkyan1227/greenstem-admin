@@ -7,7 +7,7 @@ class ServiceTask {
   final String serviceName;
   final String? mechanicPart;
   final String description;
-  final double cost;
+  final double serviceFee;
   final Duration? estimatedDuration;
   final Duration? actualDuration;
   final DateTime? startTime;
@@ -21,7 +21,7 @@ class ServiceTask {
     required this.serviceName,
     this.mechanicPart,
     required this.description,
-    required this.cost,
+    required this.serviceFee,
     required this.estimatedDuration,
     this.actualDuration,
     this.startTime,
@@ -37,7 +37,7 @@ class ServiceTask {
       serviceName: data['serviceName'] ?? '',
       mechanicPart: data['mechanicPart'],
       description: data['description'] ?? '',
-      cost: (data['cost'] ?? 0).toDouble(),
+      serviceFee: (data['serviceFee'] ?? 0).toDouble(),
       estimatedDuration:
           data['estimatedDuration'] != null
               ? Duration(seconds: data['estimatedDuration'])
@@ -70,7 +70,7 @@ class ServiceTask {
       'serviceName': serviceName,
       'mechanicPart': mechanicPart,
       'description': description,
-      'cost': cost,
+      'serviceFee': serviceFee,
       'estimatedDuration': estimatedDuration?.inSeconds,
       'actualDuration': actualDuration?.inSeconds,
       'startTime': startTime != null ? Timestamp.fromDate(startTime!) : null,
@@ -93,7 +93,7 @@ class ServiceTask {
     String? serviceName,
     String? mechanicPart,
     String? description,
-    double? cost,
+    double? serviceFee,
     Duration? estimatedDuration,
     Duration? actualDuration,
     DateTime? startTime,
@@ -107,7 +107,7 @@ class ServiceTask {
       serviceName: serviceName ?? this.serviceName,
       mechanicPart: mechanicPart ?? this.mechanicPart,
       description: description ?? this.description,
-      cost: cost ?? this.cost,
+      serviceFee: serviceFee ?? this.serviceFee,
       estimatedDuration: estimatedDuration ?? this.estimatedDuration,
       actualDuration: actualDuration ?? this.actualDuration,
       startTime: startTime ?? this.startTime,

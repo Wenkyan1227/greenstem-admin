@@ -47,7 +47,7 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
   int _stockQuantity = 0;
 
   String _serviceName = '';
-  double _cost = 0.0;
+  double _serviceFee = 0.0;
   String _serviceDescription = '';
   Duration _estimatedDuration = Duration.zero;
 
@@ -177,7 +177,7 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
               child: ListTile(
                 title: Text(serviceTask.serviceName),
                 subtitle: Text(
-                  'Cost: RM ${serviceTask.cost.toStringAsFixed(2)} | Estimated Time: ${_formatDuration(serviceTask.estimatedDuration)}',
+                  'Service Fee: RM ${serviceTask.serviceFee.toStringAsFixed(2)} | Estimated Time: ${_formatDuration(serviceTask.estimatedDuration)}',
                 ),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -227,16 +227,16 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
                     const SizedBox(height: 16),
                     TextFormField(
                       decoration: const InputDecoration(
-                        labelText: 'Cost Price',
+                        labelText: 'Service Fee',
                       ),
                       keyboardType: TextInputType.number,
                       validator:
                           (value) =>
                               value?.isEmpty ?? true
-                                  ? 'Cost is required'
+                                  ? 'Service Fee is required'
                                   : null,
                       onSaved:
-                          (value) => _cost = double.parse(value ?? '0'),
+                          (value) => _serviceFee = double.parse(value ?? '0'),
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
@@ -287,7 +287,7 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
     ServiceTaskCatalog serviceTask,
   ) {
     _name = serviceTask.serviceName;
-    _basePrice = serviceTask.cost;
+    _basePrice = serviceTask.serviceFee;
 
     showDialog(
       context: context,
@@ -314,15 +314,15 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
-                      initialValue: serviceTask.cost.toString(),
+                      initialValue: serviceTask.serviceFee.toString(),
                       decoration: const InputDecoration(
-                        labelText: 'Cost Price',
+                        labelText: 'Service Fee Price',
                       ),
                       keyboardType: TextInputType.number,
                       validator:
                           (value) =>
                               value?.isEmpty ?? true
-                                  ? 'Cost Price is required'
+                                  ? 'Service Fee Price is required'
                                   : null,
                       onSaved:
                           (value) => _basePrice = double.parse(value ?? '0'),
@@ -381,7 +381,7 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
       final serviceTask = ServiceTaskCatalog(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         serviceName: _name,
-        cost: _cost,
+        serviceFee: _serviceFee,
         description: _serviceDescription,
         estimatedDuration: _estimatedDuration,
         createdAt: DateTime.now(),
@@ -410,7 +410,7 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
       final serviceTask = ServiceTaskCatalog(
         id: serviceTaskId,
         serviceName: _serviceName,
-        cost: _cost,
+        serviceFee: _serviceFee,
         description: _serviceDescription,
         estimatedDuration: _estimatedDuration,
         createdAt: DateTime.now(),

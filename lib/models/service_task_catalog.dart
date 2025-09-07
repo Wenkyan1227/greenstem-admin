@@ -4,7 +4,7 @@ class ServiceTaskCatalog {
   final String id; // Firestore doc id
   final String serviceName; // e.g. "Oil Change"
   final String description; // e.g. "Replace engine oil and filter"
-  final double cost; // e.g. 120.0
+  final double serviceFee; // e.g. 120.0
   final Duration estimatedDuration; // e.g. "1h 30m"
   final DateTime createdAt;
 
@@ -12,7 +12,7 @@ class ServiceTaskCatalog {
     required this.id,
     required this.serviceName,
     required this.description,
-    required this.cost,
+    required this.serviceFee,
     required this.estimatedDuration,
     required this.createdAt,
   });
@@ -25,7 +25,7 @@ class ServiceTaskCatalog {
       id: id,
       serviceName: map['serviceName'] ?? '',
       description: map['description'] ?? '',
-      cost: (map['cost'] ?? 0).toDouble(), // Ensure cost is a double
+      serviceFee: (map['serviceFee'] ?? 0).toDouble(),
       estimatedDuration:
           map['estimatedDuration'] != null
               ? Duration(
@@ -46,7 +46,7 @@ class ServiceTaskCatalog {
     return {
       'serviceName': serviceName,
       'description': description,
-      'cost': cost,
+      'serviceFee': serviceFee,
       'estimatedDuration': estimatedDuration.inSeconds,
       'createdAt': Timestamp.fromDate(createdAt),
     };
@@ -56,7 +56,7 @@ class ServiceTaskCatalog {
     String? id,
     String? serviceName,
     String? description,
-    double? cost,
+    double? serviceFee,
     Duration? estimatedDuration,
     DateTime? createdAt,
   }) {
@@ -64,7 +64,7 @@ class ServiceTaskCatalog {
       id: id ?? this.id,
       serviceName: serviceName ?? this.serviceName,
       description: description ?? this.description,
-      cost: cost ?? this.cost,
+      serviceFee: serviceFee ?? this.serviceFee,
       estimatedDuration: estimatedDuration ?? this.estimatedDuration,
       createdAt: createdAt ?? this.createdAt,
     );

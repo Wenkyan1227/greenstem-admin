@@ -106,7 +106,7 @@ class JobService {
         serviceName: services[i].serviceName,
         mechanicPart: services[i].mechanicPart,
         description: services[i].description,
-        cost: services[i].cost,
+        serviceFee: services[i].serviceFee,
         estimatedDuration: services[i].estimatedDuration,
         actualDuration: services[i].actualDuration,
         startTime: services[i].startTime,

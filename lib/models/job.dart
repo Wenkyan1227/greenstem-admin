@@ -22,6 +22,7 @@ class Job {
   final String? customerSignature;
   final DateTime? completionDate;
   final String? assignedTo;
+  final double? totalCost;
 
   Job({
     required this.id,
@@ -42,6 +43,7 @@ class Job {
     this.customerSignature,
     this.completionDate,
     this.assignedTo,
+    required this.totalCost,
   });
 
   factory Job.fromFirestore(DocumentSnapshot doc) {
@@ -88,6 +90,7 @@ class Job {
                   : DateTime.parse(data['completionDate']))
               : null,
       assignedTo: data['assignedTo'],
+      totalCost: data['totalCost'],
     );
   }
 
@@ -109,6 +112,7 @@ class Job {
       'completionDate':
           completionDate != null ? Timestamp.fromDate(completionDate!) : null,
       'assignedTo': assignedTo,
+      'totalCost': totalCost,
       // Note: Don't include 'notes' and 'serviceTasks' here as they're in subcollections
     };
   }
@@ -133,6 +137,7 @@ class Job {
     String? customerSignature,
     DateTime? completionDate,
     String? assignedTo,
+    double? totalCost,
   }) {
     return Job(
       id: id ?? this.id,
@@ -152,6 +157,7 @@ class Job {
       customerSignature: customerSignature ?? this.customerSignature,
       completionDate: completionDate ?? this.completionDate,
       assignedTo: assignedTo ?? this.assignedTo,
+      totalCost: totalCost ?? this.totalCost,
     );
   }
 

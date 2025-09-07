@@ -79,7 +79,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   void _calculateTotalCost() {
     double total = 0.0;
     for (final service in _services) {
-      total += service.cost;
+      total += service.serviceFee;
     }
     for (final part in _selectedParts) {
       total += part.totalPrice;
@@ -458,7 +458,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     String selectedServiceTaskId = '';
     String serviceName = '';
     String description = '';
-    double cost = 0.0;
+    double serviceFee = 0.0;
     Duration estimatedDuration = Duration.zero;
     String notes = '';
     final GlobalKey<FormState> _dialogFormKey = GlobalKey<FormState>();
@@ -508,12 +508,12 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                               );
                               serviceName = task.serviceName;
                               description = task.description;
-                              cost = task.cost;
+                              serviceFee = task.serviceFee;
                               estimatedDuration = task.estimatedDuration;
                             } else if (value == 'others') {
                               serviceName = '';
                               description = '';
-                              cost = 0.0;
+                              serviceFee = 0.0;
                               estimatedDuration = Duration.zero;
                             }
                           });
@@ -551,7 +551,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                               Text('Name: $serviceName'),
                               if (description.isNotEmpty)
                                 Text('Description: $description'),
-                              Text('Cost: ${cost.toStringAsFixed(2)}'),
+                              Text(
+                                'Service Fee: ${serviceFee.toStringAsFixed(2)}',
+                              ),
                               Text(
                                 'Duration: ${_formatDuration(estimatedDuration)}',
                               ),
@@ -592,21 +594,22 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         const SizedBox(height: 16),
                       ],
 
-                      // Cost (for "Others" only)
+                      // Service Fee (for "Others" only)
                       if (selectedServiceTaskId == 'others') ...[
                         TextFormField(
                           decoration: const InputDecoration(
-                            labelText: 'Cost',
+                            labelText: 'Service Fee',
                             border: OutlineInputBorder(),
                             prefixText: '\$',
                           ),
                           keyboardType: TextInputType.number,
                           onChanged:
-                              (value) => cost = double.tryParse(value) ?? 0.0,
+                              (value) =>
+                                  serviceFee = double.tryParse(value) ?? 0.0,
                           validator: (value) {
                             // Check if the input value is a valid integer
                             if (value == null || value.isEmpty) {
-                              return 'Please enter the cost';
+                              return 'Please enter the serviceFee';
                             }
                             // Try to parse the value as an integer
                             final parsedValue = int.tryParse(value);
@@ -714,7 +717,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                           mechanicName: mechanic.name,
                           serviceName: serviceName,
                           description: description,
-                          cost: cost,
+                          serviceFee: serviceFee,
                           estimatedDuration: estimatedDuration,
                         );
 
@@ -725,6 +728,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         });
 
                         _recalculateJobEstimatedDuration();
+                        _calculateTotalCost();
 
                         Navigator.of(context).pop();
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -759,6 +763,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       _services.removeAt(index);
       _serviceTaskNotes.remove(serviceToRemove.id);
     });
+    _calculateTotalCost();
     _recalculateJobEstimatedDuration();
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -781,7 +786,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   ) async {
     String serviceName = service.serviceName;
     String description = service.description;
-    double cost = service.cost;
+    double serviceFee = service.serviceFee;
     Duration estimatedDuration = service.estimatedDuration!;
     String notes = _serviceTaskNotes[service.id] ?? '';
 
@@ -818,7 +823,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                           Text('Name: $serviceName'),
                           if (description.isNotEmpty)
                             Text('Description: $description'),
-                          Text('Cost: ${cost.toStringAsFixed(2)}'),
+                          Text('Service Fee: ${serviceFee.toStringAsFixed(2)}'),
                           Text(
                             'Duration: ${_formatDuration(estimatedDuration)}',
                           ),
@@ -927,6 +932,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     }
 
     if (_formKey.currentState!.validate()) {
+      _calculateTotalCost();
       _recalculateJobEstimatedDuration();
       _examineJobPriority();
 
@@ -979,7 +985,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
               id: '',
               serviceName: service.serviceName,
               description: service.description,
-              cost: service.cost,
+              serviceFee: service.serviceFee,
               estimatedDuration: service.estimatedDuration!,
               createdAt: DateTime.now(),
             );
@@ -1025,6 +1031,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             imageUrl: selectedModel.imageUrl,
             estimatedDuration: _estimatedDuration,
             assignedTo: selectedMechanic.id,
+            totalCost: _totalCost,
 
             // Exclude notes & services from main doc - will be stored in subcollections
             notes: [],
@@ -1377,6 +1384,26 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                   ),
                 ],
               ),
+              Row(
+                children: [
+                  const Text(
+                    'Total Cost: ',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  Text(
+                    _totalCost.toStringAsFixed(2),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 24),
 
               // Service Tasks
@@ -1405,7 +1432,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         children: [
                           if (service.description.isNotEmpty)
                             Text('Description: ${service.description}'),
-                          Text('Cost: ${service.cost.toStringAsFixed(2)}'),
+                          Text(
+                            'Service Fee: ${service.serviceFee.toStringAsFixed(2)}',
+                          ),
                           Text(
                             'Duration: ${_formatDuration(service.estimatedDuration!)}',
                           ),

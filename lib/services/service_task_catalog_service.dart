@@ -78,62 +78,62 @@ class ServiceTaskCatalogService {
   Future<void> addDummyServiceTasks() async {
     List<Map<String, dynamic>> dummyTasks = [
       {
-        "cost": 50.0,
+        "serviceFee": 50.0,
         "description": "Change engine oil and oil filter",
         "estimatedDuration": Duration(seconds: 3600),
         "serviceName": "Oil Change",
       },
       {
-        "cost": 120.0,
+        "serviceFee": 120.0,
         "description": "Replace front brake pads and inspect rotors",
         "estimatedDuration": Duration(seconds: 7200),
         "serviceName": "Brake Pad Replacement",
       },
       {
-        "cost": 80.0,
+        "serviceFee": 80.0,
         "description": "Rotate tires and check for uneven wear",
         "estimatedDuration": Duration(seconds: 2700),
         "serviceName": "Tire Rotation",
       },
       {
-        "cost": 150.0,
+        "serviceFee": 150.0,
         "description": "Replace car battery and perform charging system test",
         "estimatedDuration": Duration(seconds: 5400),
         "serviceName": "Battery Replacement",
       },
       {
-        "cost": 200.0,
+        "serviceFee": 200.0,
         "description":
             "Perform engine diagnostics and troubleshoot error codes",
         "estimatedDuration": Duration(seconds: 7200),
         "serviceName": "Engine Diagnostics",
       },
       {
-        "cost": 60.0,
+        "serviceFee": 60.0,
         "description": "Replace windshield wipers and check washer fluid",
         "estimatedDuration": Duration(seconds: 1800),
         "serviceName": "Wiper Replacement",
       },
       {
-        "cost": 90.0,
+        "serviceFee": 90.0,
         "description": "Replace air filter and check intake system",
         "estimatedDuration": Duration(seconds: 600),
         "serviceName": "Air Filter Replacement",
       },
       {
-        "cost": 180.0,
+        "serviceFee": 180.0,
         "description": "Flush and replace transmission fluid",
         "estimatedDuration": Duration(seconds: 9000),
         "serviceName": "Transmission Fluid Service",
       },
       {
-        "cost": 220.0,
+        "serviceFee": 220.0,
         "description": "Replace spark plugs and inspect ignition system",
         "estimatedDuration": Duration(seconds: 10800),
         "serviceName": "Spark Plug Replacement",
       },
       {
-        "cost": 300.0,
+        "serviceFee": 300.0,
         "description": "Replace timing belt and inspect water pump",
         "estimatedDuration": Duration(seconds: 18000),
         "serviceName": "Timing Belt Replacement",
@@ -145,7 +145,7 @@ class ServiceTaskCatalogService {
       final task = ServiceTaskCatalog(
         id: id,
         serviceName: taskData['serviceName'],
-        cost: taskData['cost'],
+        serviceFee: taskData['serviceFee'],
         description: taskData['description'],
         estimatedDuration: taskData['estimatedDuration'],
         createdAt: DateTime.now(),
