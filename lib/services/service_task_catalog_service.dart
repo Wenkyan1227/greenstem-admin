@@ -7,7 +7,7 @@ class ServiceTaskCatalogService {
 
   // Generate next service task ID with format J000X
   Future<String> _generateServiceTaskId() async {
-    QuerySnapshot snapshot =  
+    QuerySnapshot snapshot =
         await _serviceTaskCollection
             .orderBy(FieldPath.documentId, descending: true)
             .limit(1)
@@ -38,7 +38,7 @@ class ServiceTaskCatalogService {
   }
 
   // Add a new service task to Firestore
-  Future<void> addServiceTask(ServiceTaskCatalog task) async {
+  Future<String> addServiceTask(ServiceTaskCatalog task) async {
     try {
       // Generate a custom service task ID
       String serviceTaskId = await _generateServiceTaskId();
@@ -50,8 +50,10 @@ class ServiceTaskCatalogService {
       await docRef.set(task.copyWith(id: serviceTaskId).toFirestore());
 
       print("✅ Service task added successfully");
+      return serviceTaskId;
     } catch (e) {
       print("❌ Error adding service task: $e");
+      return 'null';
     }
   }
 

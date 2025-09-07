@@ -50,6 +50,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   DateTime _scheduledDate = DateTime.now();
   TimeOfDay _scheduledTime = TimeOfDay.now();
   Duration _estimatedDuration = Duration.zero;
+  double _totalCost = 0.0;
   String _formatDuration(Duration d) {
     final h = d.inHours;
     final m = d.inMinutes % 60;
@@ -72,6 +73,21 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     }
     setState(() {
       _estimatedDuration = total;
+    });
+  }
+
+  void _calculateTotalCost() {
+    double total = 0.0;
+    for (final service in _services) {
+      total += service.cost;
+    }
+    for (final part in _selectedParts) {
+      total += part.totalPrice;
+    }
+    // You can use this total value as needed, e.g., display it in the UI
+    print('Total Cost: \$${total.toStringAsFixed(2)}');
+    setState(() {
+      _totalCost = total;
     });
   }
 
@@ -348,7 +364,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
 
       // Check if there is enough time for the estimated job duration
       if (DateTime.now().add(_estimatedDuration).isBefore(proposedDateTime)) {
-        // If there's enough time, update _scheduledDate and call _examineJobPriority
         setState(() {
           _scheduledDate = proposedDateTime;
         });
@@ -397,7 +412,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
 
       // Check if there is enough time for the estimated job duration
       if (DateTime.now().add(_estimatedDuration).isBefore(proposedDateTime)) {
-        // If there's enough time, update _scheduledTime and call _examineJobPriority
         setState(() {
           _scheduledTime = picked;
           _scheduledDate = proposedDateTime;
@@ -448,6 +462,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     Duration estimatedDuration = Duration.zero;
     String notes = '';
     final GlobalKey<FormState> _dialogFormKey = GlobalKey<FormState>();
+    String tempId = 'TEMP_${DateTime.now().millisecondsSinceEpoch}';
 
     await showDialog(
       context: context,
@@ -643,6 +658,40 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         maxLines: 3,
                         onChanged: (value) => notes = value,
                       ),
+
+                      // Part selection
+                      const SizedBox(height: 16),
+                      JobPartsSelector(
+                        jobId:
+                            widget.jobData?.id ??
+                            DateTime.now().millisecondsSinceEpoch.toString(),
+                        taskId:
+                            selectedServiceTaskId.isNotEmpty ? tempId : 'null',
+                        selectedParts: _selectedParts,
+                        onPartAdded: (part) {
+                          setState(() {
+                            _selectedParts.add(part.copyWith(taskId: tempId));
+                          });
+                        },
+                        onPartRemoved: (partId) {
+                          setState(() {
+                            _selectedParts.removeWhere((p) => p.id == partId);
+                          });
+                        },
+                        onQuantityChanged: (partId, newQuantity) {
+                          setState(() {
+                            final index = _selectedParts.indexWhere(
+                              (p) => p.id == partId,
+                            );
+                            if (index != -1) {
+                              final part = _selectedParts[index];
+                              _selectedParts[index] = part.copyWith(
+                                quantity: newQuantity,
+                              );
+                            }
+                          });
+                        },
+                      ),
                     ],
                   ),
                 ),
@@ -660,7 +709,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         // Create the service task (don't save to database yet)
                         // Use a temporary unique ID that will be replaced in JobService
                         final serviceTask = ServiceTask(
-                          id: 'TEMP_${DateTime.now().millisecondsSinceEpoch}',
+                          id: tempId,
                           mechanicId: mechanic.id,
                           mechanicName: mechanic.name,
                           serviceName: serviceName,
@@ -789,6 +838,38 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                       controller: TextEditingController(text: notes),
                       onChanged: (value) => notes = value,
                     ),
+                    // Part selection
+                    const SizedBox(height: 16),
+                    JobPartsSelector(
+                      jobId:
+                          widget.jobData?.id ??
+                          DateTime.now().millisecondsSinceEpoch.toString(),
+                      taskId: service.id,
+                      selectedParts: _selectedParts,
+                      onPartAdded: (part) {
+                        setState(() {
+                          _selectedParts.add(part.copyWith(taskId: service.id));
+                        });
+                      },
+                      onPartRemoved: (partId) {
+                        setState(() {
+                          _selectedParts.removeWhere((p) => p.id == partId);
+                        });
+                      },
+                      onQuantityChanged: (partId, newQuantity) {
+                        setState(() {
+                          final index = _selectedParts.indexWhere(
+                            (p) => p.id == partId,
+                          );
+                          if (index != -1) {
+                            final part = _selectedParts[index];
+                            _selectedParts[index] = part.copyWith(
+                              quantity: newQuantity,
+                            );
+                          }
+                        });
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -825,7 +906,30 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   }
 
   Future<void> _saveJob() async {
+    if (_selectedPriority == 'urgent') {
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Urgent Job'),
+            content: const Text(
+              'This job is marked as urgent.\nPlease make sure you can complete it on time.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+
     if (_formKey.currentState!.validate()) {
+      _recalculateJobEstimatedDuration();
+      _examineJobPriority();
+
       try {
         final selectedMechanic = _mechanics.firstWhere(
           (mechanic) => mechanic.id == _selectedMechanic,
@@ -870,6 +974,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
           // Check if this is a new service task that should be added to catalog
           if (service.id.startsWith('TEMP_')) {
             // This is a new service task, save it to the catalog
+            final String tempTaskId = service.id;
             final newServiceTask = ServiceTaskCatalog(
               id: '',
               serviceName: service.serviceName,
@@ -880,7 +985,16 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             );
 
             try {
-              await _serviceTaskService.addServiceTask(newServiceTask);
+              String newId = await _serviceTaskService.addServiceTask(
+                newServiceTask,
+              );
+              for (int i = 0; i < _selectedParts.length; i++) {
+                final part = _selectedParts[i];
+                if (part.taskId == tempTaskId) {
+                  // Create a new part with the updated taskId and replace the old part in the list
+                  _selectedParts[i] = part.copyWith(taskId: newId);
+                }
+              }
             } catch (e) {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -1183,12 +1297,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 3,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter the job description';
-                  }
-                  return null;
-                },
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
@@ -1283,6 +1391,12 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                   final index = entry.key;
                   final service = entry.value;
                   final serviceNotes = _serviceTaskNotes[service.id] ?? '';
+
+                  final associatedParts =
+                      _selectedParts
+                          .where((part) => part.taskId == service.id)
+                          .toList();
+
                   return Card(
                     child: ListTile(
                       title: Text(service.serviceName),
@@ -1320,6 +1434,69 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                                     style: const TextStyle(fontSize: 12),
                                   ),
                                 ],
+                              ),
+                            ),
+                          ],
+
+                          // Display associated parts
+                          if (associatedParts.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Associated Parts:',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            ...associatedParts.map((part) {
+                              return Container(
+                                padding: const EdgeInsets.all(8),
+                                margin: const EdgeInsets.only(bottom: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: Colors.grey[300]!),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Part: ${part.name}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ), // Part name
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Qty: ${part.quantity}',
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                        const Spacer(),
+                                        // Part Price Calculation
+                                        Text(
+                                          'Price: \$${part.price.toStringAsFixed(2)}',
+                                          style: const TextStyle(fontSize: 14),
+                                        ),
+                                      ],
+                                    ),
+                                    Text(
+                                      'Total = \$${(part.price * part.quantity).toStringAsFixed(2)}',
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ] else ...[
+                            const SizedBox(height: 4),
+                            const Text(
+                              'No parts associated with this service.',
+                              style: TextStyle(
+                                fontStyle: FontStyle.italic,
+                                fontSize: 12,
+                                color: Colors.grey,
                               ),
                             ),
                           ],
@@ -1363,45 +1540,6 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Parts Section
-              _buildSectionTitle('Parts'),
-              JobPartsSelector(
-                jobId:
-                    widget.jobData?.id ??
-                    DateTime.now().millisecondsSinceEpoch.toString(),
-                selectedParts: _selectedParts,
-                onPartAdded: (part) {
-                  setState(() {
-                    _selectedParts.add(part);
-                  });
-                },
-                onPartRemoved: (partId) {
-                  setState(() {
-                    _selectedParts.removeWhere((p) => p.id == partId);
-                  });
-                },
-                onQuantityChanged: (partId, newQuantity) {
-                  setState(() {
-                    final index = _selectedParts.indexWhere(
-                      (p) => p.id == partId,
-                    );
-                    if (index != -1) {
-                      final part = _selectedParts[index];
-                      _selectedParts[index] = Part(
-                        id: part.id,
-                        catalogId: part.catalogId,
-                        name: part.name,
-                        price: part.price,
-                        quantity: newQuantity,
-                        addedAt: part.addedAt,
-                      );
-                    }
-                  });
-                },
-              ),
-
-              const SizedBox(height: 24),
-
               // Notes
               _buildSectionTitle('Notes'),
               TextFormField(
@@ -1416,143 +1554,195 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
               const SizedBox(height: 24),
 
               _buildSectionTitle('Scheduled Date & Time'),
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        if (_estimatedDuration.inMinutes == 0) {
-                          // If no estimated duration, show a message to ask the user to add a service task
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                'Please add a service task before setting the scheduled time.',
+
+              /// Date Picker
+              FormField<DateTime>(
+                validator: (value) {
+                  if (_selectedPriority == 'not set yet') {
+                    return 'Please select a valid scheduled date';
+                  }
+                  return null;
+                },
+                builder: (formState) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          if (_estimatedDuration.inMinutes == 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Please add a service task before setting the scheduled time.',
+                                ),
+                                backgroundColor: Colors.orange,
                               ),
-                              backgroundColor: Colors.orange,
-                            ),
-                          );
-                        } else {
-                          // Proceed with selecting the date if there's an estimated duration
-                          _selectDate();
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.grey, // Border color
-                            width: 1.0, // Border width
+                            );
+                          } else {
+                            _selectDate();
+                            formState.didChange(
+                              _scheduledDate,
+                            ); // update form state
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
                           ),
-                          borderRadius: BorderRadius.circular(
-                            8,
-                          ), // Rounded corners
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.calendar_today,
-                              color: Colors.black,
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color:
+                                  formState.hasError ? Colors.red : Colors.grey,
+                              width: 1.0,
                             ),
-                            const SizedBox(width: 10),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Scheduled Date',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.calendar_today,
+                                color: Colors.black,
+                              ),
+                              const SizedBox(width: 10),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Scheduled Date',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  DateFormat(
-                                    'MMM dd, yyyy',
-                                  ).format(_scheduledDate),
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
+                                  Text(
+                                    _scheduledDate != null
+                                        ? DateFormat(
+                                          'MMM dd, yyyy',
+                                        ).format(_scheduledDate!)
+                                        : 'Not selected',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                ],
+                      if (formState.hasError)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 5, left: 12),
+                          child: Text(
+                            formState.errorText!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
+
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                        if (_estimatedDuration.inMinutes == 0) {
-                          // If no estimated duration, show a message to ask the user to add a service task
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                'Please add a service task before setting the scheduled time.',
+
+              /// Time Picker
+              FormField<TimeOfDay>(
+                validator: (value) {
+                  if (_selectedPriority == 'not set yet') {
+                    return 'Please select a valid scheduled time';
+                  }
+                  return null;
+                },
+                builder: (formState) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          if (_estimatedDuration.inMinutes == 0) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Please add a service task before setting the scheduled time.',
+                                ),
+                                backgroundColor: Colors.orange,
                               ),
-                              backgroundColor: Colors.orange,
-                            ),
-                          );
-                        } else {
-                          // Proceed with selecting the date if there's an estimated duration
-                          _selectTime();
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: Colors.grey, // Border color
-                            width: 1.0, // Border width
+                            );
+                          } else {
+                            _selectTime();
+                            formState.didChange(
+                              _scheduledTime,
+                            ); // update form state
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
                           ),
-                          borderRadius: BorderRadius.circular(
-                            8,
-                          ), // Rounded corners
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.access_time, color: Colors.black),
-                            const SizedBox(width: 10),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Scheduled Time',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                                Text(
-                                  _scheduledTime.format(context),
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                              ],
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color:
+                                  formState.hasError ? Colors.red : Colors.grey,
+                              width: 1.0,
                             ),
-                          ],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.access_time,
+                                color: Colors.black,
+                              ),
+                              const SizedBox(width: 10),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Scheduled Time',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  Text(
+                                    _scheduledTime != null
+                                        ? _scheduledTime!.format(context)
+                                        : 'Not selected',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                ],
+                      if (formState.hasError)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 5, left: 12),
+                          child: Text(
+                            formState.errorText!,
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 32),
 

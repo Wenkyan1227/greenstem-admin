@@ -3,7 +3,8 @@ import 'package:greenstem_admin/models/part_catalog.dart';
 
 class Part {
   final String id;
-  final String catalogId;  // Reference to the catalog part
+  final String catalogId; // Reference to the catalog part
+  final String taskId;
   final String name;
   final double price;
   final int quantity;
@@ -12,6 +13,7 @@ class Part {
   Part({
     required this.id,
     required this.catalogId,
+    required this.taskId,
     required this.name,
     required this.price,
     required this.quantity,
@@ -24,6 +26,7 @@ class Part {
     return {
       'id': id,
       'catalogId': catalogId,
+      'taskId': taskId,
       'name': name,
       'price': price,
       'quantity': quantity,
@@ -35,6 +38,7 @@ class Part {
     return Part(
       id: map['id'] ?? '',
       catalogId: map['catalogId'] ?? '',
+      taskId: map['taskId'] ?? '',
       name: map['name'] ?? '',
       price: (map['price'] ?? 0.0).toDouble(),
       quantity: map['quantity'] ?? 0,
@@ -51,6 +55,7 @@ class Part {
     return Part(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       catalogId: catalog.id,
+      taskId: 'TEMP_ID',
       name: catalog.name,
       price: catalog.basePrice,
       quantity: quantity,
@@ -60,6 +65,7 @@ class Part {
   Part copyWith({
     String? id,
     String? catalogId,
+    String? taskId,
     String? name,
     double? price,
     int? quantity,
@@ -70,6 +76,7 @@ class Part {
     return Part(
       id: id ?? this.id,
       catalogId: catalogId ?? this.catalogId,
+      taskId: taskId ?? this.taskId,
       name: name ?? this.name,
       price: price ?? this.price,
       quantity: quantity ?? this.quantity,
