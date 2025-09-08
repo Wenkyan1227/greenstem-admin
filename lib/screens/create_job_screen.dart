@@ -1646,11 +1646,9 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                                     ),
                                   ),
                                   Text(
-                                    _scheduledDate != null
-                                        ? DateFormat(
+                                    DateFormat(
                                           'MMM dd, yyyy',
-                                        ).format(_scheduledDate!)
-                                        : 'Not selected',
+                                        ).format(_scheduledDate),
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -1743,9 +1741,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                                     ),
                                   ),
                                   Text(
-                                    _scheduledTime != null
-                                        ? _scheduledTime!.format(context)
-                                        : 'Not selected',
+                                    _scheduledTime.format(context),
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,

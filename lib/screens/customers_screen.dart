@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../models/customer.dart';
 import '../services/customer_service.dart';
 import '../widgets/customer_card.dart';
@@ -21,7 +20,6 @@ class _CustomerScreenState extends State<CustomerScreen> {
   String _searchQuery = '';
   String _selectedVehicleBrand = '';
   String _selectedVehicleModel = '';
-  String _selectedVehiclePlate = '';
   List<VehicleBrand> _vehicleBrands = [];
   List<VehicleModel> _availableModels = [];
 
@@ -461,12 +459,6 @@ class _CustomerScreenState extends State<CustomerScreen> {
     final vehiclePlateController = TextEditingController(
       text: customer.vehiclePlate,
     );
-    final vehicleModelController = TextEditingController(
-      text: customer.vehicleModel,
-    );
-    final vehicleBrandController = TextEditingController(
-      text: customer.vehicleBrand,
-    );
 
     // Initialize the selected values based on the current customer data
     _selectedVehicleBrand = customer.vehicleBrand;
@@ -600,8 +592,8 @@ class _CustomerScreenState extends State<CustomerScreen> {
                       nameController.text,
                       contactController.text,
                       vehiclePlateController.text,
-                      _selectedVehicleModel ?? '',
-                      _selectedVehicleBrand ?? '',
+                      _selectedVehicleModel,
+                      _selectedVehicleBrand,
                     );
                     Navigator.pop(context);
                   }

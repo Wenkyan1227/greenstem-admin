@@ -160,6 +160,65 @@ class JobService {
     await _jobsCollection.doc(job.id).update(jobData);
   }
 
+  // Update job priority based on scheduled date and estimated duration
+  Future<void> updateJobPriorities() async {
+    try {
+      final snapshot = await _jobsCollection.get();
+      
+      for (final doc in snapshot.docs) {
+        final job = Job.fromFirestore(doc);
+        
+        // Skip completed or cancelled jobs
+        if (job.status == 'completed' || job.status == 'cancelled') {
+          continue;
+        }
+        
+        final now = DateTime.now();
+        final scheduledDateTime = job.scheduledDate;
+        
+        // Calculate remaining time
+        final remainingTime = scheduledDateTime.difference(now);
+        final remainingTimeWithBuffer = remainingTime - job.estimatedDuration;
+        
+        String newPriority;
+        if (remainingTimeWithBuffer.inHours <= 2) {
+          newPriority = 'urgent';
+        } else if (remainingTimeWithBuffer.inHours <= 8) {
+          newPriority = 'high';
+        } else if (remainingTimeWithBuffer.inHours <= 24) {
+          newPriority = 'medium';
+        } else {
+          newPriority = 'low';
+        }
+        
+        // Only update if priority has changed
+        if (job.priority != newPriority) {
+          await _jobsCollection.doc(job.id).update({'priority': newPriority});
+        }
+      }
+    } catch (e) {
+      print('Error updating job priorities: $e');
+      rethrow;
+    }
+  }
+
+  // Update priority for a single job based on scheduled date
+  String calculateJobPriority(DateTime scheduledDate, Duration estimatedDuration) {
+    final now = DateTime.now();
+    final remainingTime = scheduledDate.difference(now);
+    final remainingTimeWithBuffer = remainingTime - estimatedDuration;
+    
+    if (remainingTimeWithBuffer.inHours <= 2) {
+      return 'urgent';
+    } else if (remainingTimeWithBuffer.inHours <= 8) {
+      return 'high';
+    } else if (remainingTimeWithBuffer.inHours <= 24) {
+      return 'medium';
+    } else {
+      return 'low';
+    }
+  }
+
   // Update job with subcollections
   Future<void> updateJobWithSubcollections(
     Job job, {

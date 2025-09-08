@@ -5,7 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../models/mechanic.dart';
 import '../services/mechanic_service.dart';
-import '../services/admin_service.dart';
 import '../widgets/mechanic_card.dart';
 import '../widgets/working_schedule.dart';
 import '../widgets/mechanic_attendance_summary.dart';
@@ -20,7 +19,6 @@ class MechanicsScreen extends StatefulWidget {
 class _MechanicsScreenState extends State<MechanicsScreen>
     with TickerProviderStateMixin {
   final MechanicService _mechanicService = MechanicService();
-  final AdminService _adminService = AdminService();
   String _searchQuery = '';
   late TabController _tabController;
   DateTime _selectedMonth = DateTime.now();

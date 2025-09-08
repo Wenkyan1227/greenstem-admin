@@ -59,6 +59,17 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
       setState(() {}); // Trigger rebuild when tab changes
     });
     _loadMechanicNames();
+    _updateJobPrioritiesOnLoad();
+  }
+
+  Future<void> _updateJobPrioritiesOnLoad() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+    try {
+      await _jobService.updateJobPriorities();
+    } catch (e) {
+      // Silently handle errors for auto-update
+      debugPrint('Auto-update job priorities failed: $e');
+    }
   }
 
   Future<void> _loadMechanicNames() async {
@@ -815,75 +826,75 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
                     ? _jobService.getJobs()
                     : _jobService.getJobsByStatus(_selectedStatus),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-              if (snapshot.hasError) {
-                debugPrint('🔥 Jobs stream error: ${snapshot.error}');
-                debugPrintStack(stackTrace: snapshot.stackTrace);
-                return Center(child: Text('Error: ${snapshot.error}'));
-              }
+                if (snapshot.hasError) {
+                  debugPrint('🔥 Jobs stream error: ${snapshot.error}');
+                  debugPrintStack(stackTrace: snapshot.stackTrace);
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
 
-              if (snapshot.hasData) {
-                debugPrint('✅ Jobs snapshot received: ${snapshot.data}');
-              }
+                if (snapshot.hasData) {
+                  debugPrint('✅ Jobs snapshot received: ${snapshot.data}');
+                }
 
-              final jobs = snapshot.data ?? [];
-              final filteredJobs =
-                  jobs.where((job) {
-                    if (_searchQuery.isEmpty) return true;
-                    return job.customerName.toLowerCase().contains(
-                          _searchQuery.toLowerCase(),
-                        ) ||
-                        job.vehicleModel.toLowerCase().contains(
-                          _searchQuery.toLowerCase(),
-                        ) ||
-                        job.vehiclePlate.toLowerCase().contains(
-                          _searchQuery.toLowerCase(),
-                        );
-                  }).toList();
+                final jobs = snapshot.data ?? [];
+                final filteredJobs =
+                    jobs.where((job) {
+                      if (_searchQuery.isEmpty) return true;
+                      return job.customerName.toLowerCase().contains(
+                            _searchQuery.toLowerCase(),
+                          ) ||
+                          job.vehicleModel.toLowerCase().contains(
+                            _searchQuery.toLowerCase(),
+                          ) ||
+                          job.vehiclePlate.toLowerCase().contains(
+                            _searchQuery.toLowerCase(),
+                          );
+                    }).toList();
 
-              if (filteredJobs.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.work_outline,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No jobs found',
-                        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: filteredJobs.length,
-                itemBuilder: (context, index) {
-                  final job = filteredJobs[index];
-                  return JobCard(
-                    job: job,
-                    onTap: () {
-                      _showJobDetails(job);
-                    },
-                    onStatusChanged: (newStatus) {
-                      _updateJobStatus(job.id, newStatus);
-                    },
-                    getMechanicName: _getMechanicName,
+                if (filteredJobs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.work_outline,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No jobs found',
+                          style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
                   );
-                },
-              );
-            },
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: filteredJobs.length,
+                  itemBuilder: (context, index) {
+                    final job = filteredJobs[index];
+                    return JobCard(
+                      job: job,
+                      onTap: () {
+                        _showJobDetails(job);
+                      },
+                      onStatusChanged: (newStatus) {
+                        _updateJobStatus(job.id, newStatus);
+                      },
+                      getMechanicName: _getMechanicName,
+                    );
+                  },
+                );
+              },
+            ),
           ),
-        ),
       ],
     );
   }
