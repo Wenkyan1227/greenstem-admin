@@ -1050,6 +1050,10 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
                               'Description',
                               displayJob.description,
                             ),
+                            _buildDetailRow(
+                              'Total Cost',
+                              displayJob.totalCost!.toStringAsFixed(2),
+                            ),
 
                             // ✅ Now notes & services will load
                             if (displayJob.notes.isNotEmpty) ...[

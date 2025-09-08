@@ -157,12 +157,15 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
     _descriptionController.text = job.description;
     _customerNameController.text = job.customerName;
     _customerContactController.text = job.customerContact;
+    _selectedVehiclePlate = job.vehiclePlate;
     _vehiclePlateController.text = job.vehiclePlate;
     _selectedStatus = job.status;
     _selectedPriority = job.priority;
     _scheduledDate = job.scheduledDate;
     _scheduledTime = TimeOfDay.fromDateTime(job.scheduledDate);
     _estimatedDuration = job.estimatedDuration;
+    print(job.totalCost!);
+    _totalCost = job.totalCost!;
 
     // Load the job with full details including notes and service tasks
     Job? jobWithDetails = await _jobService.getJobWithDetails(job.id);
@@ -271,7 +274,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       setState(() {
         _vehicleBrands = brands;
         if (_vehicleBrands.isNotEmpty && _selectedVehicleBrand.isEmpty) {
-          _selectedVehicleBrand = _vehicleBrands.first.id;
+          // _selectedVehicleBrand = _vehicleBrands.first.id;
           _updateAvailableModels();
         }
 
@@ -294,7 +297,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
       setState(() {
         _customers = customers;
         if (_customers.isNotEmpty && _selectedVehiclePlate.isEmpty) {
-          _selectedVehiclePlate = _customers.first.vehiclePlate;
+          // _selectedVehiclePlate = _customers.first.vehiclePlate;
           _updateVehicleAndCustomerInfo();
         }
       });
@@ -1213,12 +1216,15 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         child: Text(brand.name),
                       );
                     }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedVehicleBrand = value ?? '';
-                    _updateAvailableModels();
-                  });
-                },
+                onChanged:
+                    _selectedVehiclePlate != 'others'
+                        ? null // disable dropdown if plate is not "others"
+                        : (value) {
+                          setState(() {
+                            _selectedVehicleBrand = value ?? '';
+                            _updateAvailableModels();
+                          });
+                        },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please select a vehicle brand';
@@ -1249,11 +1255,14 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                         child: Text(model.name),
                       );
                     }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedVehicleModel = value ?? '';
-                  });
-                },
+                onChanged:
+                    _selectedVehiclePlate != 'others'
+                        ? null // disable dropdown if plate is not "others"
+                        : (value) {
+                          setState(() {
+                            _selectedVehicleModel = value ?? '';
+                          });
+                        },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please select a vehicle model';
@@ -1647,8 +1656,8 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                                   ),
                                   Text(
                                     DateFormat(
-                                          'MMM dd, yyyy',
-                                        ).format(_scheduledDate),
+                                      'MMM dd, yyyy',
+                                    ).format(_scheduledDate),
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,

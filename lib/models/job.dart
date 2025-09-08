@@ -90,7 +90,7 @@ class Job {
                   : DateTime.parse(data['completionDate']))
               : null,
       assignedTo: data['assignedTo'],
-      totalCost: data['totalCost'],
+      totalCost: (data['totalCost'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -112,7 +112,7 @@ class Job {
       'completionDate':
           completionDate != null ? Timestamp.fromDate(completionDate!) : null,
       'assignedTo': assignedTo,
-      'totalCost': totalCost,
+      'totalCost': totalCost!.toDouble(),
       // Note: Don't include 'notes' and 'serviceTasks' here as they're in subcollections
     };
   }
