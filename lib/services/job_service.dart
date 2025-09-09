@@ -142,7 +142,15 @@ class JobService {
     // Add parts to subcollection with proper ID format P000X_0X
     for (int i = 0; i < parts.length; i++) {
       String partId = 'P${jobId}_${(i + 1).toString().padLeft(2, '0')}';
-      final partWithId = parts[i].copyWith(id: partId);
+      final matchingService = services.firstWhere(
+        (s) => s.id == parts[i].taskId,
+        orElse: () => services.first,
+      );
+      final partWithId = parts[i].copyWith(
+        id: partId,
+        taskId: matchingService.id, // set the correct service task ID
+      );
+      // final partWithId = parts[i].copyWith(id: partId);
       batch.set(docRef.collection("parts").doc(partId), partWithId.toMap());
     }
 
@@ -164,22 +172,22 @@ class JobService {
   Future<void> updateJobPriorities() async {
     try {
       final snapshot = await _jobsCollection.get();
-      
+
       for (final doc in snapshot.docs) {
         final job = Job.fromFirestore(doc);
-        
+
         // Skip completed or cancelled jobs
         if (job.status == 'completed' || job.status == 'cancelled') {
           continue;
         }
-        
+
         final now = DateTime.now();
         final scheduledDateTime = job.scheduledDate;
-        
+
         // Calculate remaining time
         final remainingTime = scheduledDateTime.difference(now);
         final remainingTimeWithBuffer = remainingTime - job.estimatedDuration;
-        
+
         String newPriority;
         if (remainingTimeWithBuffer.inHours <= 2) {
           newPriority = 'urgent';
@@ -190,7 +198,7 @@ class JobService {
         } else {
           newPriority = 'low';
         }
-        
+
         // Only update if priority has changed
         if (job.priority != newPriority) {
           await _jobsCollection.doc(job.id).update({'priority': newPriority});
@@ -203,11 +211,14 @@ class JobService {
   }
 
   // Update priority for a single job based on scheduled date
-  String calculateJobPriority(DateTime scheduledDate, Duration estimatedDuration) {
+  String calculateJobPriority(
+    DateTime scheduledDate,
+    Duration estimatedDuration,
+  ) {
     final now = DateTime.now();
     final remainingTime = scheduledDate.difference(now);
     final remainingTimeWithBuffer = remainingTime - estimatedDuration;
-    
+
     if (remainingTimeWithBuffer.inHours <= 2) {
       return 'urgent';
     } else if (remainingTimeWithBuffer.inHours <= 8) {
