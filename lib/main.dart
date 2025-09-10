@@ -12,6 +12,7 @@ import 'package:greenstem_admin/services/notification_service.dart';
 
 // import 'services/vehicle_service.dart';
 // import 'services/service_task_catalog_service.dart';
+// import 'services/part_catalog_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,6 +25,10 @@ void main() async {
   // Initialize default service data
   // final serviceTaskService = ServiceTaskCatalogService();
   // await serviceTaskService.addDummyServiceTasks();
+
+  // Initialize default part data
+  // final partService = PartCatalogService();
+  // await partService.addDummyParts();
   await NotificationService.init();
   runApp(const MyApp());
 }

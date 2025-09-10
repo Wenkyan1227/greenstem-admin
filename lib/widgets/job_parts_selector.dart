@@ -27,19 +27,10 @@ class JobPartsSelector extends StatefulWidget {
 
 class _JobPartsSelectorState extends State<JobPartsSelector> {
   final PartCatalogService _partService = PartCatalogService();
-  late List<Part> currentSelectedParts;
 
   @override
   void initState() {
     super.initState();
-    if(widget.taskId == 'null') {
-      currentSelectedParts = [];
-    } else {
-      currentSelectedParts = widget.selectedParts
-          .where((part) => part.taskId == widget.taskId)
-          .toList();
-    }
-    // currentSelectedParts = List.from(widget.selectedParts);
   }
 
   @override
@@ -99,16 +90,20 @@ class _JobPartsSelectorState extends State<JobPartsSelector> {
   }
 
   Widget _buildPartsList() {
-    if (widget.selectedParts.isEmpty) {
+    final partsForTask =
+        widget.selectedParts
+            .where((part) => part.taskId == widget.taskId)
+            .toList();
+    if (partsForTask.isEmpty) {
       return const Text('No parts added yet');
     }
 
     return ListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: currentSelectedParts.length,
+      itemCount: partsForTask.length,
       itemBuilder: (context, index) {
-        final part = currentSelectedParts[index];
+        final part = partsForTask[index];
         return Card(
           child: ListTile(
             title: Row(
@@ -211,7 +206,6 @@ class _JobPartsSelectorState extends State<JobPartsSelector> {
                         trailing: ElevatedButton(
                           onPressed: () {
                             final newPart = Part.fromCatalog(part, quantity: 1);
-                            currentSelectedParts.add(newPart);
                             widget.onPartAdded(newPart);
                             Navigator.pop(context);
                           },

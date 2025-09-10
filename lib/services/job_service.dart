@@ -95,6 +95,7 @@ class JobService {
       generalNote.toFirestore(),
     );
 
+    final Map<String, String> serviceIdMap = {};
     // Add service tasks to subcollection with proper ID format ST000X_0X
     for (int i = 0; i < services.length; i++) {
       String taskId = 'ST${jobId}_${(i + 1).toString().padLeft(2, '0')}';
@@ -113,6 +114,7 @@ class JobService {
         endTime: services[i].endTime,
         status: services[i].status,
       );
+      serviceIdMap[services[i].id] = taskId;
 
       batch.set(
         docRef.collection("service_tasks").doc(taskId),
@@ -142,13 +144,12 @@ class JobService {
     // Add parts to subcollection with proper ID format P000X_0X
     for (int i = 0; i < parts.length; i++) {
       String partId = 'P${jobId}_${(i + 1).toString().padLeft(2, '0')}';
-      final matchingService = services.firstWhere(
-        (s) => s.id == parts[i].taskId,
-        orElse: () => services.first,
-      );
+
+      final updatedTaskId = serviceIdMap[parts[i].taskId] ?? parts[i].taskId;
+
       final partWithId = parts[i].copyWith(
         id: partId,
-        taskId: matchingService.id, // set the correct service task ID
+        taskId: updatedTaskId, // set the correct service task ID
       );
       // final partWithId = parts[i].copyWith(id: partId);
       batch.set(docRef.collection("parts").doc(partId), partWithId.toMap());

@@ -51,6 +51,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
   TimeOfDay _scheduledTime = TimeOfDay.now();
   Duration _estimatedDuration = Duration.zero;
   double _totalCost = 0.0;
+  bool _isSubmitting = false;
   String _formatDuration(Duration d) {
     final h = d.inHours;
     final m = d.inMinutes % 60;
@@ -976,44 +977,44 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
             }
             return;
           }
-        }
 
-        // Save new service tasks to database first (if they're new "Others" entries)
-        for (final service in _services) {
-          // Check if this is a new service task that should be added to catalog
-          if (service.id.startsWith('TEMP_')) {
-            // This is a new service task, save it to the catalog
-            final String tempTaskId = service.id;
-            final newServiceTask = ServiceTaskCatalog(
-              id: '',
-              serviceName: service.serviceName,
-              description: service.description,
-              serviceFee: service.serviceFee,
-              estimatedDuration: service.estimatedDuration!,
-              createdAt: DateTime.now(),
-            );
-
-            try {
-              String newId = await _serviceTaskService.addServiceTask(
-                newServiceTask,
+          // Save new service tasks to database first (if they're new "Others" entries)
+          for (final service in _services) {
+            // Check if this is a new service task that should be added to catalog
+            if (service.id.startsWith('TEMP_')) {
+              // This is a new service task, save it to the catalog
+              final String tempTaskId = service.id;
+              final newServiceTask = ServiceTaskCatalog(
+                id: '',
+                serviceName: service.serviceName,
+                description: service.description,
+                serviceFee: service.serviceFee,
+                estimatedDuration: service.estimatedDuration!,
+                createdAt: DateTime.now(),
               );
-              for (int i = 0; i < _selectedParts.length; i++) {
-                final part = _selectedParts[i];
-                if (part.taskId == tempTaskId) {
-                  // Create a new part with the updated taskId and replace the old part in the list
-                  _selectedParts[i] = part.copyWith(taskId: newId);
-                }
-              }
-            } catch (e) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error saving service task to catalog: $e'),
-                    backgroundColor: Colors.red,
-                  ),
+
+              try {
+                String newId = await _serviceTaskService.addServiceTask(
+                  newServiceTask,
                 );
+                for (int i = 0; i < _selectedParts.length; i++) {
+                  final part = _selectedParts[i];
+                  if (part.taskId == tempTaskId) {
+                    // Create a new part with the updated taskId and replace the old part in the list
+                    _selectedParts[i] = part.copyWith(taskId: newId);
+                  }
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error saving service task to catalog: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+                return;
               }
-              return;
             }
           }
         }
@@ -1277,6 +1278,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _customerNameController,
+                enabled: _selectedVehiclePlate == 'others',
                 decoration: const InputDecoration(
                   labelText: 'Customer Name *',
                   border: OutlineInputBorder(),
@@ -1291,6 +1293,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _customerContactController,
+                enabled: _selectedVehiclePlate == 'others',
                 decoration: const InputDecoration(
                   labelText: 'Customer Contact *',
                   border: OutlineInputBorder(),
@@ -1784,7 +1787,19 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _saveJob,
+                  onPressed:
+                      _isSubmitting
+                          ? null
+                          : () async {
+                            setState(() {
+                              _isSubmitting = true;
+                            });
+                            await _saveJob();
+
+                            setState(() {
+                              _isSubmitting = false;
+                            });
+                          },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF3C5C39),
                     foregroundColor: Colors.white,
