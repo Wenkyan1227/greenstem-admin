@@ -60,7 +60,7 @@ class _CustomerScreenState extends State<CustomerScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Customer Management'),
-        backgroundColor: const Color(0xFF29A87A),
+        backgroundColor: const Color(0xFF3C5C39),
         foregroundColor: Colors.white,
         actions: [
           IconButton(
