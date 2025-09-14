@@ -483,6 +483,7 @@ class _CreateJobScreenState extends State<CreateJobScreen> {
                     children: [
                       // Service Task Selection
                       DropdownButtonFormField<String>(
+                        isExpanded: true,
                         value:
                             selectedServiceTaskId.isNotEmpty
                                 ? selectedServiceTaskId
