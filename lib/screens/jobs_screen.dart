@@ -51,6 +51,14 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
   String _serviceDescription = '';
   Duration _estimatedDuration = Duration.zero;
 
+  bool _isPartSaving = false;
+  bool _isPartUpdating = false;
+  bool _isPartDeleting = false;
+
+  bool _isTaskSaving = false;
+  bool _isTaskUpdating = false;
+  bool _isTaskDeleting = false;
+
   @override
   void initState() {
     super.initState();
@@ -272,8 +280,11 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
                               value?.isEmpty ?? true
                                   ? 'Estimated duration is required'
                                   : null,
-                      onSaved: (value) =>
-                          _estimatedDuration = Duration(seconds: int.tryParse(value!*60) ?? 0),
+                      onSaved:
+                          (value) =>
+                              _estimatedDuration = Duration(
+                                seconds: int.tryParse(value! * 60) ?? 0,
+                              ),
                     ),
                   ],
                 ),
@@ -285,8 +296,25 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                onPressed: () => _saveServiceTask(context),
-                child: const Text('Save'),
+                onPressed:
+                    _isTaskSaving
+                        ? null
+                        : () async {
+                          setState(() => _isTaskSaving = true);
+                          _saveServiceTask(context);
+                          setState(() => _isTaskSaving = false);
+                        },
+                child:
+                    _isTaskSaving
+                        ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                        : const Text('Save'),
               ),
             ],
           ),
@@ -364,8 +392,11 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
                               value?.isEmpty ?? true
                                   ? 'Estimated duration is required'
                                   : null,
-                      onSaved: (value) => _estimatedDuration =
-                          Duration(seconds: int.tryParse(value!*60) ?? 0),
+                      onSaved:
+                          (value) =>
+                              _estimatedDuration = Duration(
+                                seconds: int.tryParse(value! * 60) ?? 0,
+                              ),
                     ),
                   ],
                 ),
@@ -377,8 +408,25 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                onPressed: () => _updateServiceTask(context, serviceTask.id),
-                child: const Text('Update'),
+                onPressed:
+                    _isTaskUpdating
+                        ? null
+                        : () async {
+                          setState(() => _isTaskUpdating = true);
+                          _updateServiceTask(context, serviceTask.id);
+                          setState(() => _isTaskUpdating = false);
+                        },
+                child:
+                    _isTaskUpdating
+                        ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                        : const Text('Update'),
               ),
             ],
           ),
@@ -464,28 +512,52 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                onPressed: () {
-                  _serviceTaskService
-                      .deleteServiceTask(serviceTask.id)
-                      .then((_) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Service task deleted successfully'),
+                onPressed:
+                    _isTaskDeleting
+                        ? null
+                        : () async {
+                          setState(() => _isTaskDeleting = true);
+
+                          try {
+                            await _serviceTaskService.deleteServiceTask(
+                              serviceTask.id,
+                            );
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Service task deleted successfully',
+                                  ),
+                                ),
+                              );
+                            }
+                          } catch (error) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Error deleting service task: $error',
+                                  ),
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (mounted)
+                              setState(() => _isTaskDeleting = false);
+                          }
+                        },
+                child:
+                    _isTaskDeleting
+                        ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
                           ),
-                        );
-                      })
-                      .catchError((error) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Error deleting service task: $error',
-                            ),
-                          ),
-                        );
-                      });
-                },
-                child: const Text('Delete'),
+                        )
+                        : const Text('Delete'),
               ),
             ],
           ),
@@ -597,8 +669,25 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                onPressed: () => _savePart(context),
-                child: const Text('Save'),
+                onPressed:
+                    _isPartSaving
+                        ? null
+                        : () async {
+                          setState(() => _isPartSaving = true);
+                          _savePart(context);
+                          setState(() => _isPartSaving = false);
+                        },
+                child:
+                    _isPartSaving
+                        ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                        : const Text('Save'),
               ),
             ],
           ),
@@ -671,8 +760,25 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                onPressed: () => _updatePart(context, part.id),
-                child: const Text('Update'),
+                onPressed:
+                    _isPartUpdating
+                        ? null
+                        : () async {
+                          setState(() => _isPartUpdating = true);
+                          _updatePart(context, part.id);
+                          setState(() => _isPartUpdating = false);
+                        },
+                child:
+                    _isPartUpdating
+                        ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                        : const Text('Update'),
               ),
             ],
           ),
@@ -747,26 +853,46 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
               ),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                onPressed: () {
-                  _partService
-                      .deleteCatalogPart(part.id)
-                      .then((_) {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Part deleted successfully'),
+                onPressed:
+                    _isPartDeleting
+                        ? null
+                        : () async {
+                          setState(() => _isPartDeleting = true);
+
+                          try {
+                            await _partService.deleteCatalogPart(part.id);
+                            if (context.mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Part deleted successfully'),
+                                ),
+                              );
+                            }
+                          } catch (error) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error deleting part: $error'),
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (mounted)
+                              setState(() => _isPartDeleting = false);
+                          }
+                        },
+                child:
+                    _isPartDeleting
+                        ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
                           ),
-                        );
-                      })
-                      .catchError((error) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Error deleting part: $error'),
-                          ),
-                        );
-                      });
-                },
-                child: const Text('Delete'),
+                        )
+                        : const Text('Delete'),
               ),
             ],
           ),
@@ -826,75 +952,75 @@ class _JobsScreenState extends State<JobsScreen> with TickerProviderStateMixin {
                     ? _jobService.getJobs()
                     : _jobService.getJobsByStatus(_selectedStatus),
             builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-                if (snapshot.hasError) {
-                  debugPrint('🔥 Jobs stream error: ${snapshot.error}');
-                  debugPrintStack(stackTrace: snapshot.stackTrace);
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
+              if (snapshot.hasError) {
+                debugPrint('🔥 Jobs stream error: ${snapshot.error}');
+                debugPrintStack(stackTrace: snapshot.stackTrace);
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
 
-                if (snapshot.hasData) {
-                  debugPrint('✅ Jobs snapshot received: ${snapshot.data}');
-                }
+              if (snapshot.hasData) {
+                debugPrint('✅ Jobs snapshot received: ${snapshot.data}');
+              }
 
-                final jobs = snapshot.data ?? [];
-                final filteredJobs =
-                    jobs.where((job) {
-                      if (_searchQuery.isEmpty) return true;
-                      return job.customerName.toLowerCase().contains(
-                            _searchQuery.toLowerCase(),
-                          ) ||
-                          job.vehicleModel.toLowerCase().contains(
-                            _searchQuery.toLowerCase(),
-                          ) ||
-                          job.vehiclePlate.toLowerCase().contains(
-                            _searchQuery.toLowerCase(),
-                          );
-                    }).toList();
+              final jobs = snapshot.data ?? [];
+              final filteredJobs =
+                  jobs.where((job) {
+                    if (_searchQuery.isEmpty) return true;
+                    return job.customerName.toLowerCase().contains(
+                          _searchQuery.toLowerCase(),
+                        ) ||
+                        job.vehicleModel.toLowerCase().contains(
+                          _searchQuery.toLowerCase(),
+                        ) ||
+                        job.vehiclePlate.toLowerCase().contains(
+                          _searchQuery.toLowerCase(),
+                        );
+                  }).toList();
 
-                if (filteredJobs.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.work_outline,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No jobs found',
-                          style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: filteredJobs.length,
-                  itemBuilder: (context, index) {
-                    final job = filteredJobs[index];
-                    return JobCard(
-                      job: job,
-                      onTap: () {
-                        _showJobDetails(job);
-                      },
-                      onStatusChanged: (newStatus) {
-                        _updateJobStatus(job.id, newStatus);
-                      },
-                      getMechanicName: _getMechanicName,
-                    );
-                  },
+              if (filteredJobs.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.work_outline,
+                        size: 64,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No jobs found',
+                        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
                 );
-              },
-            ),
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: filteredJobs.length,
+                itemBuilder: (context, index) {
+                  final job = filteredJobs[index];
+                  return JobCard(
+                    job: job,
+                    onTap: () {
+                      _showJobDetails(job);
+                    },
+                    onStatusChanged: (newStatus) {
+                      _updateJobStatus(job.id, newStatus);
+                    },
+                    getMechanicName: _getMechanicName,
+                  );
+                },
+              );
+            },
           ),
+        ),
       ],
     );
   }

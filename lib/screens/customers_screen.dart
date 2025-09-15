@@ -23,6 +23,10 @@ class _CustomerScreenState extends State<CustomerScreen> {
   List<VehicleBrand> _vehicleBrands = [];
   List<VehicleModel> _availableModels = [];
 
+  bool _isCustomerSaving = false;
+  bool _isCustomerUpdating = false;
+  bool _isCustomerDeleting = false;
+
   @override
   void initState() {
     super.initState();
@@ -285,16 +289,61 @@ class _CustomerScreenState extends State<CustomerScreen> {
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                onPressed: () {
-                  _saveCustomer(
-                    nameController,
-                    contactController,
-                    vehiclePlateController,
-                    vehicleModelController,
-                    vehicleBrandController,
-                  );
-                },
-                child: const Text('Save'),
+                onPressed:
+                    _isCustomerSaving
+                        ? null
+                        : () async {
+                          setState(() {
+                            _isCustomerSaving = true;
+                          });
+
+                          try {
+                            _saveCustomer(
+                              nameController,
+                              contactController,
+                              vehiclePlateController,
+                              vehicleModelController,
+                              vehicleBrandController,
+                            );
+
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Customer saved successfully!'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error saving customer: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (mounted) {
+                              setState(() {
+                                _isCustomerSaving = false;
+                              });
+                            }
+                          }
+                        },
+                child:
+                    _isCustomerSaving
+                        ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                        : const Text('Save'),
               ),
             ],
           ),
@@ -462,10 +511,10 @@ class _CustomerScreenState extends State<CustomerScreen> {
 
     // Initialize the selected values based on the current customer data
     _selectedVehicleBrand = customer.vehicleBrand;
+
     /// Make sure to load the models for the selected brand
     _updateAvailableModels();
     _selectedVehicleModel = customer.vehicleModel;
-
 
     showDialog(
       context: context,
@@ -582,23 +631,68 @@ class _CustomerScreenState extends State<CustomerScreen> {
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                onPressed: () {
-                  // Validate the form
-                  if (formKey.currentState?.validate() ?? false) {
-                    // Save the edited values
-                    _updateCustomer(
-                      context,
-                      customer.id,
-                      nameController.text,
-                      contactController.text,
-                      vehiclePlateController.text,
-                      _selectedVehicleModel,
-                      _selectedVehicleBrand,
-                    );
-                    Navigator.pop(context);
-                  }
-                },
-                child: const Text('Update'),
+                onPressed:
+                    _isCustomerUpdating
+                        ? null
+                        : () async {
+                          // Validate the form
+                          if (formKey.currentState?.validate() ?? false) {
+                            setState(() {
+                              _isCustomerUpdating = true;
+                            });
+                            // Save the edited values
+                            try {
+                              _updateCustomer(
+                                context,
+                                customer.id,
+                                nameController.text,
+                                contactController.text,
+                                vehiclePlateController.text,
+                                _selectedVehicleModel,
+                                _selectedVehicleBrand,
+                              );
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Customer Updated successfully!',
+                                    ),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            } catch (e) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Error saving customer: $e'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            } finally {
+                              if (mounted) {
+                                setState(() {
+                                  _isCustomerUpdating = false;
+                                });
+                              }
+                            }
+                            Navigator.pop(context);
+                          }
+                        },
+                child:
+                    _isCustomerUpdating
+                        ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                        : Text('Update'),
               ),
             ],
           ),
@@ -666,36 +760,61 @@ class _CustomerScreenState extends State<CustomerScreen> {
                 child: const Text('Cancel'),
               ),
               ElevatedButton(
-                onPressed: () async {
-                  try {
-                    // Note: Add actual delete method to MechanicService
-                    // await _mechanicService.deleteMechanic(mechanic.id);
+                onPressed:
+                    _isCustomerDeleting
+                        ? null
+                        : () async {
+                          setState(() {
+                            _isCustomerDeleting = true;
+                          });
+                          try {
+                            await _customerService.deleteCustomer(customer.id);
 
-                    if (mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Mechanic deleted successfully!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error deleting mechanic: $e'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  }
-                },
+                            if (mounted) {
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Customer deleted successfully!',
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error deleting customer: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (mounted) {
+                              setState(() {
+                                _isCustomerDeleting = false;
+                              });
+                            }
+                          }
+                        },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.red,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('Delete'),
+                child:
+                    _isCustomerDeleting
+                        ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        )
+                        : const Text('Delete'),
               ),
             ],
           ),
